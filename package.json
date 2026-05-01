@@ -31,7 +31,7 @@
         "appId": "com.hacklayer.ctf-kiosk",
         "productName": "HackLayer CTF",
         "directories": {
-            "output": "../dist"
+            "output": "dist"
         },
         "win": {
             "target": [
