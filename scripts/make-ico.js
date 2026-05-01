@@ -39,9 +39,19 @@ function buildIco(pngBuffers, sizes) {
     return Buffer.concat([header, ...dirEntries, ...pngBuffers]);
 }
 
-// Read the 256x256 PNG and embed it as a single-size ICO
-// electron-builder accepts 256x256 PNG inside ICO
-const pngBuffer = fs.readFileSync(PNG_PATH);
-const icoBuffer = buildIco([pngBuffer], [256]);
+// Build multi-size ICO from tmp-icons (Windows needs 16,32,48,256 for taskbar + desktop)
+const TMP_DIR = path.join(__dirname, '..', 'assets', 'tmp-icons');
+const sizes = [16, 32, 48, 64, 128, 256];
+const pngBuffers = sizes.map(size => {
+    const file = path.join(TMP_DIR, `icon-${size}.png`);
+    if (!fs.existsSync(file)) {
+        console.error('Missing: ' + file);
+        process.exit(1);
+    }
+    return fs.readFileSync(file);
+});
+
+const icoBuffer = buildIco(pngBuffers, sizes);
 fs.writeFileSync(ICO_PATH, icoBuffer);
 console.log('ICO generated: ' + ICO_PATH + ' (' + icoBuffer.length + ' bytes)');
+console.log('Sizes embedded: ' + sizes.join(', '));
