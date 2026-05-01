@@ -19,10 +19,14 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npx electron-builder --win --x64
+      - run: ls -R dist/ || true
+        shell: bash
       - uses: actions/upload-artifact@v4
         with:
           name: HackLayer-CTF-Windows
-          path: dist/*.exe
+          path: |
+            dist/*.exe
+            ../dist/*.exe
           retention-days: 30
 
   build-mac:
@@ -34,10 +38,14 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npx electron-builder --mac --arm64
+      - run: ls -R dist/ || ls -R ../dist/ || true
+        shell: bash
       - uses: actions/upload-artifact@v4
         with:
           name: HackLayer-CTF-Mac
-          path: dist/*.dmg
+          path: |
+            dist/*.dmg
+            ../dist/*.dmg
           retention-days: 30
 
   build-linux:
@@ -49,8 +57,12 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npx electron-builder --linux AppImage
+      - run: ls -R dist/ || ls -R ../dist/ || true
+        shell: bash
       - uses: actions/upload-artifact@v4
         with:
           name: HackLayer-CTF-Linux
-          path: dist/*.AppImage
+          path: |
+            dist/*.AppImage
+            ../dist/*.AppImage
           retention-days: 30
