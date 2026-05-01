@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';">
+    <title>HackLayer CTF - Select Event</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="category-container">
+        <div class="page-bg"></div>
+        <div class="category-box card-accent" id="step1Box">
+            <div class="user-info" id="userInfo">
+                <img src="" id="userAvatar" alt="">
+                <div>
+                    <div class="name" id="userName"></div>
+                    <div class="id" id="userId"></div>
+                </div>
+            </div>
+
+            <h2>Select Category</h2>
+            <p style="color:var(--text-muted);margin-bottom:20px;font-size:12px;">Choose a category, then pick an event
+            </p>
+
+            <div class="error-msg" id="errorMsg"></div>
+
+            <div class="form-group">
+                <label>Category</label>
+                <select id="categorySelect">
+                    <option value="">Loading categories...</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="eventSection" style="display:none;">
+                <label>Event</label>
+                <select id="eventSelect">
+                    <option value="">-- Select Event --</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="codeSection" style="display:none;">
+                <label>Access Code</label>
+                <input type="text" id="accessCode" placeholder="Enter your access code" autocomplete="off">
+            </div>
+
+            <div class="loading" id="loading">
+                <span class="spinner"></span> Validating...
+            </div>
+
+            <button class="btn" id="submitBtn" style="display:none;" onclick="submitCode()">Enter with Code</button>
+            <button class="btn" id="freeBtn" style="display:none;background:var(--accent);color:#000;"
+                onclick="joinFree()">Join Free Event</button>
+
+            <button class="btn btn-secondary" style="margin-top:8px;" onclick="logout()">Logout</button>
+            <button class="btn btn-secondary" style="margin-top:8px;"
+                onclick="window.ctfAPI.navigate('profile.html')">👤 Profile & Stats</button>
+            <button class="btn btn-secondary" style="margin-top:8px;" onclick="window.ctfAPI.exitApp()">Exit</button>
+        </div>
+
+        <!-- Step 2: Slot Picker -->
+        <div class="category-box card-accent" id="step2Box" style="display:none;width:520px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+                <button class="btn btn-secondary" style="width:auto;padding:8px 14px;font-size:11px;"
+                    onclick="goBackToStep1()">← Back</button>
+                <div>
+                    <div style="font-weight:600;font-size:14px;color:var(--text);" id="slotEventTitle"></div>
+                    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;"
+                        id="slotEventCategory"></div>
+                </div>
+            </div>
+
+            <h2 style="margin-bottom:4px;">Choose Time Slot</h2>
+            <p style="color:var(--text-muted);margin-bottom:16px;font-size:12px;">Select when you want to play. You can
+                only join within the entry window.</p>
+
+            <div class="error-msg" id="slotErrorMsg"></div>
+
+            <div class="loading" id="slotLoading">
+                <span class="spinner"></span> Loading slots...
+            </div>
+
+            <div id="slotList" style="max-height:340px;overflow-y:auto;"></div>
+
+            <div id="noSlots"
+                style="display:none;text-align:center;padding:30px 10px;color:var(--text-muted);font-size:13px;">
+                No upcoming slots available. Check back later.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        const token = sessionStorage.getItem('ctf_token');
+        const user = JSON.parse(sessionStorage.getItem('ctf_user') || '{}');
+
+        if (!token) window.ctfAPI.navigate('login.html');
+
+        // Show user info
+        document.getElementById('userName').textContent = user.display_name || user.username;
+        document.getElementById('userId').textContent = 'ID: #' + user.id;
+        if (user.avatar) document.getElementById('userAvatar').src = user.avatar;
+
+        let validatedEvent = null;
+        let allEvents = [];
+        let slotRefreshInterval = null;
+
+        // Load events and populate category dropdown
+        (async () => {
+            const res = await window.ctfAPI.request('/events', 'GET', null, token);
+
+            const catSelect = document.getElementById('categorySelect');
+            catSelect.innerHTML = '<option value="">-- Select Category --</option>';
+            if (res.status === 200 && res.data.events) {
+                allEvents = res.data.events;
+                // Extract unique categories
+                const categories = [...new Set(allEvents.map(ev => ev.category))];
+                categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat;
+                    opt.textContent = cat;
+                    catSelect.appendChild(opt);
+                });
+            }
+        })();
+
+        // When category changes → populate event dropdown
+        document.getElementById('categorySelect').addEventListener('change', function () {
+            const eventSection = document.getElementById('eventSection');
+            const eventSelect = document.getElementById('eventSelect');
+            const codeSection = document.getElementById('codeSection');
+            const submitBtn = document.getElementById('submitBtn');
+            const freeBtn = document.getElementById('freeBtn');
+
+            // Reset downstream
+            codeSection.style.display = 'none';
+            submitBtn.style.display = 'none';
+            freeBtn.style.display = 'none';
+            document.getElementById('errorMsg').classList.remove('show');
+
+            if (!this.value) {
+                eventSection.style.display = 'none';
+                return;
+            }
+
+            // Filter events by selected category
+            const filtered = allEvents.filter(ev => ev.category === this.value);
+            eventSelect.innerHTML = '<option value="">-- Select Event --</option>';
+            filtered.forEach(ev => {
+                const opt = document.createElement('option');
+                opt.value = ev.id;
+                const tag = ev.event_type === 'free' ? '  #free' : '  #paid';
+                opt.textContent = ev.title + tag;
+                opt.dataset.type = ev.event_type;
+                opt.dataset.category = ev.category;
+                eventSelect.appendChild(opt);
+            });
+
+            eventSection.style.display = 'block';
+        });
+
+        // When event changes → show code field or free button
+        document.getElementById('eventSelect').addEventListener('change', function () {
+            const selected = this.options[this.selectedIndex];
+            const type = selected?.dataset?.type;
+            const codeSection = document.getElementById('codeSection');
+            const submitBtn = document.getElementById('submitBtn');
+            const freeBtn = document.getElementById('freeBtn');
+
+            if (!this.value) {
+                codeSection.style.display = 'none';
+                submitBtn.style.display = 'none';
+                freeBtn.style.display = 'none';
+                return;
+            }
+
+            if (type === 'paid') {
+                codeSection.style.display = 'block';
+                submitBtn.style.display = 'block';
+                freeBtn.style.display = 'none';
+                document.getElementById('accessCode').value = '';
+                document.getElementById('accessCode').focus();
+            } else {
+                codeSection.style.display = 'none';
+                submitBtn.style.display = 'none';
+                freeBtn.style.display = 'block';
+            }
+
+            document.getElementById('errorMsg').classList.remove('show');
+        });
+
+        // Join free event (no code needed)
+        async function joinFree() {
+            const select = document.getElementById('eventSelect');
+            const eventId = parseInt(select.value, 10);
+            const selected = select.options[select.selectedIndex];
+            const errorEl = document.getElementById('errorMsg');
+            const loadingEl = document.getElementById('loading');
+            const btn = document.getElementById('freeBtn');
+
+            errorEl.classList.remove('show');
+
+            if (!eventId) {
+                errorEl.textContent = 'Please select an event.';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            btn.disabled = true;
+            loadingEl.classList.add('show');
+
+            try {
+                const res = await window.ctfAPI.request('/validate-code', 'POST', {
+                    event_id: eventId,
+                    category: selected.dataset.category || '',
+                    code: 'FREE'
+                }, token);
+
+                if (res.status === 200 && res.data.success) {
+                    validatedEvent = res.data;
+                    sessionStorage.setItem('ctf_event', JSON.stringify(res.data));
+                    showSlotPicker();
+                } else {
+                    errorEl.textContent = res.data.error || 'Could not join this free event.';
+                    errorEl.classList.add('show');
+                }
+            } catch (err) {
+                errorEl.textContent = 'Connection error.';
+                errorEl.classList.add('show');
+            }
+
+            btn.disabled = false;
+            loadingEl.classList.remove('show');
+        }
+
+        // Submit paid code
+        async function submitCode() {
+            const select = document.getElementById('eventSelect');
+            const selected = select.options[select.selectedIndex];
+            const code = document.getElementById('accessCode').value.trim();
+            const errorEl = document.getElementById('errorMsg');
+            const loadingEl = document.getElementById('loading');
+            const btn = document.getElementById('submitBtn');
+
+            errorEl.classList.remove('show');
+
+            if (!select.value) {
+                errorEl.textContent = 'Please select an event.';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            if (!code) {
+                errorEl.textContent = 'Please enter your access code.';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            btn.disabled = true;
+            loadingEl.classList.add('show');
+
+            try {
+                const res = await window.ctfAPI.request('/validate-code', 'POST', {
+                    event_id: parseInt(select.value, 10) || 0,
+                    category: selected.dataset.category || '',
+                    code: code
+                }, token);
+
+                if (res.status === 200 && res.data.success) {
+                    validatedEvent = res.data;
+                    sessionStorage.setItem('ctf_event', JSON.stringify(res.data));
+                    showSlotPicker();
+                } else {
+                    errorEl.textContent = res.data.error || 'Invalid code.';
+                    errorEl.classList.add('show');
+                }
+            } catch (err) {
+                errorEl.textContent = 'Connection error.';
+                errorEl.classList.add('show');
+            }
+
+            btn.disabled = false;
+            loadingEl.classList.remove('show');
+        }
+
+        // Step 2: Show slot picker
+        async function showSlotPicker() {
+            document.getElementById('step1Box').style.display = 'none';
+            document.getElementById('step2Box').style.display = 'block';
+            document.getElementById('slotEventTitle').textContent = validatedEvent.event_title;
+            document.getElementById('slotEventCategory').textContent = validatedEvent.category || '';
+
+            await loadSlots();
+
+            // Auto-refresh slots every 30 seconds
+            if (slotRefreshInterval) clearInterval(slotRefreshInterval);
+            slotRefreshInterval = setInterval(() => loadSlots(), 30000);
+        }
+
+        async function loadSlots() {
+            const slotLoading = document.getElementById('slotLoading');
+            const slotList = document.getElementById('slotList');
+            const noSlots = document.getElementById('noSlots');
+            const errorEl = document.getElementById('slotErrorMsg');
+
+            slotLoading.classList.add('show');
+            slotList.innerHTML = '';
+            noSlots.style.display = 'none';
+            errorEl.classList.remove('show');
+
+            try {
+                const res = await window.ctfAPI.request(`/slots/${validatedEvent.event_id}`, 'GET', null, token);
+                slotLoading.classList.remove('show');
+
+                if (res.status === 200 && res.data.slots.length > 0) {
+                    const duration = res.data.duration_minutes;
+                    const joinWindow = res.data.join_window_minutes;
+
+                    res.data.slots.forEach(slot => {
+                        const startTime = new Date(slot.starts_at.replace(' ', 'T'));
+                        const endTime = new Date(slot.ends_at.replace(' ', 'T'));
+                        const deadline = new Date(slot.join_deadline.replace(' ', 'T'));
+                        const now = new Date();
+
+                        const timeStr = formatTime(startTime) + ' — ' + formatTime(endTime);
+                        const dateStr = formatDate(startTime);
+                        const spotsLeft = slot.max_players - slot.current_players;
+
+                        let statusText, statusClass, canJoin;
+
+                        if (slot.joinable) {
+                            if (now >= startTime) {
+                                statusText = 'LIVE — Join now (closes ' + formatTime(deadline) + ')';
+                                statusClass = 'slot-live';
+                            } else {
+                                statusText = 'Open for entry';
+                                statusClass = 'slot-open';
+                            }
+                            canJoin = true;
+                        } else {
+                            const minsUntil = Math.ceil((startTime - now) / 60000);
+                            statusText = 'Starts in ' + minsUntil + ' min';
+                            statusClass = 'slot-upcoming';
+                            canJoin = false;
+                        }
+
+                        const card = document.createElement('div');
+                        card.className = 'slot-card ' + statusClass;
+
+                        const timeRow = document.createElement('div');
+                        timeRow.className = 'slot-time-row';
+                        const timeDiv = document.createElement('div');
+                        timeDiv.className = 'slot-time';
+                        timeDiv.textContent = timeStr;
+                        const dateDiv = document.createElement('div');
+                        dateDiv.className = 'slot-date';
+                        dateDiv.textContent = dateStr;
+                        timeRow.appendChild(timeDiv);
+                        timeRow.appendChild(dateDiv);
+
+                        const infoRow = document.createElement('div');
+                        infoRow.className = 'slot-info-row';
+                        const statusBadge = document.createElement('span');
+                        statusBadge.className = 'slot-status-badge ' + statusClass;
+                        statusBadge.textContent = statusText;
+                        const playersSpan = document.createElement('span');
+                        playersSpan.className = 'slot-players';
+                        playersSpan.textContent = spotsLeft + ' spots left';
+                        infoRow.appendChild(statusBadge);
+                        infoRow.appendChild(playersSpan);
+
+                        const btn = document.createElement('button');
+                        btn.className = 'btn' + (canJoin ? '' : ' btn-secondary');
+                        btn.style.cssText = 'margin-top:10px;font-size:12px;padding:10px;';
+                        btn.disabled = !canJoin;
+                        btn.textContent = canJoin ? 'Join This Slot' : 'Not Yet Open';
+                        const safeSlotId = parseInt(slot.slot_id, 10);
+                        if (canJoin && !isNaN(safeSlotId)) {
+                            btn.addEventListener('click', () => joinSlot(safeSlotId));
+                        }
+
+                        card.appendChild(timeRow);
+                        card.appendChild(infoRow);
+                        card.appendChild(btn);
+                        slotList.appendChild(card);
+                    });
+                } else {
+                    noSlots.style.display = 'block';
+                }
+            } catch (err) {
+                slotLoading.classList.remove('show');
+                errorEl.textContent = 'Failed to load slots.';
+                errorEl.classList.add('show');
+            }
+        }
+
+        async function joinSlot(slotId) {
+            const errorEl = document.getElementById('slotErrorMsg');
+            errorEl.classList.remove('show');
+
+            // Disable all join buttons
+            document.querySelectorAll('#slotList .btn').forEach(b => b.disabled = true);
+
+            try {
+                const joinRes = await window.ctfAPI.request('/slot/join', 'POST', {
+                    slot_id: slotId,
+                    code_id: validatedEvent.code_id || 0
+                }, token);
+
+                if (joinRes.status === 200 && joinRes.data.success) {
+                    // Fetch full slot info
+                    const slotRes = await window.ctfAPI.request('/slot', 'POST', {
+                        event_id: validatedEvent.event_id
+                    }, token);
+
+                    if (slotRes.status === 200) {
+                        sessionStorage.setItem('ctf_slot', JSON.stringify(slotRes.data));
+                        window.ctfAPI.navigate('lobby.html');
+                    }
+                } else {
+                    errorEl.textContent = joinRes.data.error || 'Could not join slot.';
+                    errorEl.classList.add('show');
+                    // Re-enable buttons
+                    document.querySelectorAll('#slotList .btn').forEach(b => b.disabled = false);
+                }
+            } catch (err) {
+                errorEl.textContent = 'Connection error.';
+                errorEl.classList.add('show');
+                document.querySelectorAll('#slotList .btn').forEach(b => b.disabled = false);
+            }
+        }
+
+        function goBackToStep1() {
+            if (slotRefreshInterval) { clearInterval(slotRefreshInterval); slotRefreshInterval = null; }
+            document.getElementById('step2Box').style.display = 'none';
+            document.getElementById('step1Box').style.display = 'block';
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        }
+
+        function formatDate(date) {
+            return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.ctfAPI.clearSession();
+            window.ctfAPI.navigate('login.html');
+        }
+    </script>
+</body>
+
+</html>

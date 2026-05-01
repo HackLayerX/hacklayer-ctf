@@ -1,0 +1,106 @@
+{
+    "name": "ctf-kiosk",
+    "version": "1.0.0",
+    "description": "CTF Event Kiosk - Secure Environment",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron .",
+        "build": "electron-builder --win --x64",
+        "build:win": "electron-builder --win --x64",
+        "build:mac": "electron-builder --mac",
+        "build:linux": "electron-builder --linux",
+        "build:all": "electron-builder --win --x64 --linux",
+        "pack": "electron-builder --dir",
+        "checksum": "node scripts/generate-checksums.js"
+    },
+    "author": {
+        "name": "HackLayer",
+        "email": "support@hacklayer.com"
+    },
+    "homepage": "https://hacklayer.com",
+    "license": "UNLICENSED",
+    "dependencies": {
+        "node-fetch": "^2.7.0",
+        "electron-updater": "^6.1.7"
+    },
+    "devDependencies": {
+        "electron": "^28.0.0",
+        "electron-builder": "^24.9.0"
+    },
+    "build": {
+        "appId": "com.hacklayer.ctf-kiosk",
+        "productName": "HackLayer CTF",
+        "directories": {
+            "output": "../dist"
+        },
+        "win": {
+            "target": [
+                "nsis",
+                "portable"
+            ],
+            "icon": "assets/icon.ico",
+            "signAndEditExecutable": false,
+            "requestedExecutionLevel": "asInvoker"
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true,
+            "artifactName": "HackLayer-CTF-Setup-${version}.${ext}",
+            "shortcutName": "HackLayer CTF",
+            "uninstallDisplayName": "HackLayer CTF",
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true
+        },
+        "mac": {
+            "target": [
+                {
+                    "target": "dmg",
+                    "arch": [
+                        "arm64"
+                    ]
+                }
+            ],
+            "icon": "assets/icon.png",
+            "category": "public.app-category.education",
+            "artifactName": "HackLayer-CTF-${version}-${arch}.${ext}",
+            "hardenedRuntime": false,
+            "gatekeeperAssess": false
+        },
+        "dmg": {
+            "title": "HackLayer CTF",
+            "iconSize": 80,
+            "contents": [
+                {
+                    "x": 130,
+                    "y": 220
+                },
+                {
+                    "x": 410,
+                    "y": 220,
+                    "type": "link",
+                    "path": "/Applications"
+                }
+            ]
+        },
+        "linux": {
+            "target": [
+                "AppImage"
+            ],
+            "icon": "assets/icon.png",
+            "category": "Education",
+            "artifactName": "HackLayer-CTF-${version}.${ext}",
+            "maintainer": "HackLayer <support@hacklayer.com>"
+        },
+        "files": [
+            "**/*",
+            "!node_modules/.cache/**"
+        ],
+        "extraResources": [
+            {
+                "from": "config.json",
+                "to": "config.json"
+            }
+        ],
+        "publish": null
+    }
+}

@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'none'; object-src 'none'; base-uri 'none';">
+    <title>HackLayer Sidebar</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/hacklayer.css">
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar is the entire window content */
+        .sidebar-window {
+            display: flex;
+            height: 100vh;
+            background: transparent;
+        }
+
+        /* Panel area (left side, hidden when collapsed) */
+        .panel-area {
+            flex: 1;
+            display: none;
+            background: rgba(10, 10, 16, 0.95);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border);
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-area.open {
+            display: flex;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-header h3 {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin: 0;
+        }
+
+        .panel-close {
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .panel-close:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px;
+        }
+
+        /* Button strip (right side, always visible) */
+        .btn-strip {
+            width: 64px;
+            min-width: 64px;
+            background: rgba(8, 8, 12, 0.92);
+            backdrop-filter: blur(16px);
+            border-left: 1px solid rgba(0, 232, 123, 0.06);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+            gap: 4px;
+        }
+
+        /* Overlays fill the whole sidebar window */
+        .warning-overlay,
+        .kick-overlay,
+        .exit-overlay,
+        .result-overlay {
+            position: fixed !important;
+            inset: 0 !important;
+        }
+
+        /* Notification popup */
+        .hl-notif {
+            left: auto !important;
+            right: 72px !important;
+            transform: translateY(-100px) !important;
+        }
+
+        .hl-notif.show {
+            transform: translateY(0) !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar-window">
+        <!-- ===== PANEL AREA (expandable left side) ===== -->
+        <div class="panel-area" id="panelArea">
+            <!-- Leaderboard Panel -->
+            <div class="panel-content" id="panelLeaderboard" style="display:none;">
+                <div class="panel-header">
+                    <h3>Leaderboard</h3>
+                    <span class="panel-close" onclick="closePanel()">&times;</span>
+                </div>
+                <div class="panel-body hl-panel-body" id="leaderboardBody"></div>
+            </div>
+
+            <!-- Challenges Panel -->
+            <div class="panel-content" id="panelFlags" style="display:none;">
+                <div class="panel-header">
+                    <h3>Challenges</h3>
+                    <span class="panel-close" onclick="closePanel()">&times;</span>
+                </div>
+                <div class="panel-body hl-panel-body" id="flagsBody"></div>
+            </div>
+
+            <!-- Activity Log Panel -->
+            <div class="panel-content" id="panelLogs" style="display:none;">
+                <div class="panel-header">
+                    <h3>Activity Log</h3>
+                    <span class="panel-close" onclick="closePanel()">&times;</span>
+                </div>
+                <div class="panel-body hl-panel-body" id="logsBody"></div>
+            </div>
+
+            <!-- Score Panel -->
+            <div class="panel-content" id="panelScore" style="display:none;">
+                <div class="panel-header">
+                    <h3>Progress</h3>
+                    <span class="panel-close" onclick="closePanel()">&times;</span>
+                </div>
+                <div class="panel-body hl-panel-body">
+                    <div class="score-grid">
+                        <div class="score-item">
+                            <div class="score-value accent" id="myScore">0</div>
+                            <div class="score-label">Points</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-value" id="myFlags">0/0</div>
+                            <div class="score-label">Flags</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-value" id="myRank">--</div>
+                            <div class="score-label">Rank</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-value amber" id="myWarnings">0/3</div>
+                            <div class="score-label">Warnings</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== BUTTON STRIP (right side, always visible) ===== -->
+        <div class="btn-strip">
+            <!-- Timer -->
+            <div class="hl-timer-box">
+                <div class="hl-timer" id="eventTimer">--:--:--</div>
+                <div class="hl-timer-label">
+                    <div class="hl-dot"></div>
+                    <span>LIVE</span>
+                </div>
+            </div>
+
+            <!-- User info -->
+            <div class="hl-user-info">
+                <img src="" id="hlAvatar" alt="" class="hl-user-avatar">
+                <div class="hl-user-name" id="hlUsername"></div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="hl-buttons">
+                <button class="hl-btn" onclick="togglePanel('leaderboard')" id="btnLeaderboard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M8 21h8m-4-4v4M6 4h12l-1 7a5 5 0 01-10 0L6 4zM4 4h2M18 4h2M9 10h.01M15 10h.01" />
+                    </svg>
+                    <span>Ranks</span>
+                </button>
+                <button class="hl-btn" onclick="togglePanel('flags')" id="btnFlags">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7" />
+                    </svg>
+                    <span>Flags</span>
+                </button>
+                <button class="hl-btn" onclick="togglePanel('logs')" id="btnLogs">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M4 6h16M4 10h16M4 14h10M4 18h6" />
+                    </svg>
+                    <span>Logs</span>
+                </button>
+                <button class="hl-btn" onclick="togglePanel('score')" id="btnScore">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M18 20V10M12 20V4M6 20v-6" />
+                    </svg>
+                    <span>Score</span>
+                </button>
+            </div>
+
+            <!-- Exit -->
+            <button class="hl-btn hl-exit-btn" onclick="showExitConfirm()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                </svg>
+                <span>Exit</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ===== HACKER NOTIFICATION ===== -->
+    <div class="hl-notif" id="fakeNotif">
+        <div class="hl-notif-icon" id="notifIcon">??</div>
+        <div>
+            <div class="hl-notif-app" id="notifApp">Unknown</div>
+            <div class="hl-notif-msg" id="notifMsg"></div>
+        </div>
+    </div>
+
+    <!-- ===== WARNING OVERLAY ===== -->
+    <div class="warning-overlay" id="warningOverlay">
+        <div class="warning-box">
+            <div class="warning-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
+                    <path
+                        d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+            </div>
+            <h2>Security Warning</h2>
+            <p>Unauthorized action detected.</p>
+            <div class="warning-count" id="warningCount">1/3</div>
+            <p style="font-size:11px;color:var(--text-muted);margin-top:8px;">Next violation may result in removal.</p>
+            <button class="btn btn-danger" style="width:auto;padding:10px 32px;display:inline-block;margin-top:14px;"
+                onclick="dismissWarning()">UNDERSTOOD</button>
+        </div>
+    </div>
+
+    <!-- ===== KICK OVERLAY ===== -->
+    <div class="kick-overlay" id="kickOverlay">
+        <div class="kick-box">
+            <div class="kick-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M15 9l-6 6M9 9l6 6" />
+                </svg>
+            </div>
+            <h2>You Have Been Removed</h2>
+            <p style="color:var(--text-secondary);margin:12px 0;">Security violation detected. You have been removed
+                from this event.</p>
+            <p style="color:var(--text-muted);font-size:11px;margin-bottom:18px;">Your access code is no longer valid.
+            </p>
+            <button class="btn btn-danger" onclick="exitAfterKick()">EXIT</button>
+        </div>
+    </div>
+
+    <!-- ===== EXIT CONFIRM OVERLAY ===== -->
+    <div class="exit-overlay" id="exitOverlay">
+        <div class="exit-box" style="text-align:center;">
+            <div style="margin-bottom:16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"
+                    style="width:48px;height:48px;margin:0 auto;">
+                    <path
+                        d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+            </div>
+            <h2 style="color:var(--text);margin-bottom:8px;font-size:15px;text-transform:uppercase;letter-spacing:1px;">
+                Leave Event?</h2>
+            <p style="color:var(--text-muted);font-size:12px;margin-bottom:6px;">Your progress will be saved but you
+                cannot rejoin this slot.</p>
+            <p style="color:#ef4444;font-size:11px;margin-bottom:18px;">Your access code will be marked as used.</p>
+            <button class="btn btn-danger" style="margin-bottom:8px;" onclick="confirmExit()">Yes, Leave Event</button>
+            <button class="btn btn-secondary" onclick="cancelExit()">Stay in Event</button>
+        </div>
+    </div>
+
+    <!-- ===== RESULT OVERLAY ===== -->
+    <div class="result-overlay" id="resultOverlay">
+        <div class="result-box">
+            <h1>Event Complete</h1>
+            <div class="result-rank" id="resultRank">#--</div>
+            <div class="result-stats">
+                <div class="result-stat">
+                    <div class="val" id="resultScore">0</div>
+                    <div class="lbl">Points</div>
+                </div>
+                <div class="result-stat">
+                    <div class="val" id="resultFlags">0</div>
+                    <div class="lbl">Flags</div>
+                </div>
+            </div>
+            <div class="result-code" id="resultCode" style="display:none;"></div>
+            <button class="btn" style="margin-top:14px;" onclick="exitEvent()">Exit</button>
+        </div>
+    </div>
+
+    <script>
+        // ==================== HACKLAYER SIDEBAR CONTROLLER ====================
+        // Runs in separate always-on-top window. Gets session data via IPC.
+        // All game logic runs here; wallpaper window is just the animated background.
+
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('selectstart', e => e.preventDefault());
+
+        // ===== Session Data (loaded via IPC) =====
+        let token = '';
+        let user = {};
+        let event = {};
+        let slot = {};
+        let sessionId = null;
+        let challenges = [];
+        let solvedFlags = {};
+        let warnings = 0;
+        let isKicked = false;
+        let myScore = 0;
+        let myFlagCount = 0;
+        let eventEnded = false;
+        let botProfiles = [];
+        let botProgress = {};
+        let notifications = [];
+        let notifShown = 0;
+        let notifTimers = [];
+        let logEntries = [];
+        let activePanel = null;
+        let displayMode = 'multi';
+        let eventDescription = '';
+
+        const SIDEBAR_COLLAPSED = 64;
+        const SIDEBAR_EXPANDED = 384;
+
+        // ===== Init (async — wait for IPC session data) =====
+        (async function init() {
+            // Get session data from main process
+            const data = await window.ctfAPI.getSessionData();
+            if (!data || !data.token) {
+                // No session — close sidebar
+                window.ctfAPI.exitApp();
+                return;
+            }
+
+            token = data.token;
+            user = JSON.parse(data.user || '{}');
+            event = JSON.parse(data.event || '{}');
+            slot = JSON.parse(data.slot || '{}');
+
+            if (!token || !slot.slot_id) {
+                window.ctfAPI.exitApp();
+                return;
+            }
+
+            // User info in sidebar
+            document.getElementById('hlUsername').textContent = user.display_name || user.username;
+            if (user.avatar) document.getElementById('hlAvatar').src = user.avatar;
+
+            // Get session ID
+            const slotRes = await window.ctfAPI.request('/slot/status/' + slot.slot_id, 'GET', null, token);
+            if (slotRes.status === 200) {
+                const me = slotRes.data.players.find(p => p.user_id === user.id);
+                if (me) sessionId = me.session_id;
+            }
+
+            if (sessionId) {
+                await window.ctfAPI.setSession(sessionId, token);
+            }
+
+            // Load challenges
+            const chRes = await window.ctfAPI.request('/challenges/' + event.event_id, 'GET', null, token);
+            if (chRes.status === 200) {
+                challenges = chRes.data.challenges || [];
+                displayMode = chRes.data.display_mode || 'multi';
+                eventDescription = chRes.data.event_description || '';
+                renderFlags();
+            }
+
+            // Load bot profiles
+            const botRes = await window.ctfAPI.request('/bots/' + slot.slot_id, 'GET', null, token);
+            if (botRes.status === 200) {
+                botProfiles = botRes.data.bots || [];
+                botProfiles.forEach(b => {
+                    botProgress[b.id] = { score: 0, flags_solved: 0, kicked: false };
+                });
+            }
+
+            // Load notifications (paid events only)
+            if (event.event_type === 'paid') {
+                const notifRes = await window.ctfAPI.request('/notifications', 'GET', null, token);
+                if (notifRes.status === 200) {
+                    notifications = notifRes.data.notifications || [];
+                    scheduleFakeNotifications();
+                }
+            }
+
+            // Start timer
+            startEventTimer();
+
+            // Startup logs
+            addLog('HackLayer environment initialized', 'success');
+            addLog('Event: ' + (event.event_title || 'Unknown'), 'info');
+            addLog('Player: ' + (user.display_name || user.username) + ' connected', 'info');
+            if (challenges.length > 0) {
+                addLog(challenges.length + ' challenges loaded', 'info');
+            }
+
+            // Start bot simulation
+            simulateBots();
+
+            // Polling
+            setInterval(pollLeaderboard, 10000);
+            setInterval(pollLogs, 8000);
+            setInterval(checkSlotValidity, 15000); // Check if slot still exists
+
+            // Open leaderboard by default
+            togglePanel('leaderboard');
+
+            // Mic monitoring
+            startMicMonitoring();
+        })();
+
+        // ===== Event Timer =====
+        function startEventTimer() {
+            const endTime = slot.ends_at
+                ? new Date(slot.ends_at.replace(' ', 'T')).getTime()
+                : new Date(slot.starts_at.replace(' ', 'T')).getTime() + (slot.duration_minutes || 60) * 60000;
+
+            function tick() {
+                if (eventEnded || isKicked) return;
+                const now = Date.now();
+                const diff = endTime - now;
+
+                if (diff <= 0) {
+                    document.getElementById('eventTimer').textContent = '00:00:00';
+                    endEvent();
+                    return;
+                }
+
+                const hrs = Math.floor(diff / 3600000);
+                const mins = Math.floor((diff % 3600000) / 60000);
+                const secs = Math.floor((diff % 60000) / 1000);
+                document.getElementById('eventTimer').textContent =
+                    String(hrs).padStart(2, '0') + ':' + String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+
+                requestAnimationFrame(tick);
+            }
+            tick();
+        }
+
+        // ===== Panel Toggle (resizes sidebar window) =====
+        async function togglePanel(name) {
+            const panelId = 'panel' + name.charAt(0).toUpperCase() + name.slice(1);
+            const btnId = 'btn' + name.charAt(0).toUpperCase() + name.slice(1);
+            const panel = document.getElementById(panelId);
+            const btn = document.getElementById(btnId);
+            const panelArea = document.getElementById('panelArea');
+
+            // Deactivate all buttons
+            document.querySelectorAll('.hl-btn').forEach(b => b.classList.remove('active'));
+            // Hide all panel contents
+            document.querySelectorAll('.panel-content').forEach(p => p.style.display = 'none');
+
+            if (activePanel === name) {
+                // Close panel — collapse sidebar
+                activePanel = null;
+                panelArea.classList.remove('open');
+                await window.ctfAPI.resizeSidebar(SIDEBAR_COLLAPSED);
+                return;
+            }
+
+            // Open panel — expand sidebar
+            activePanel = name;
+            panelArea.classList.add('open');
+            panel.style.display = 'flex';
+            panel.style.flexDirection = 'column';
+            panel.style.height = '100%';
+            if (btn) btn.classList.add('active');
+            await window.ctfAPI.resizeSidebar(SIDEBAR_EXPANDED);
+
+            // Refresh data when opening
+            if (name === 'leaderboard') pollLeaderboard();
+        }
+
+        async function closePanel() {
+            document.querySelectorAll('.hl-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.panel-content').forEach(p => p.style.display = 'none');
+            document.getElementById('panelArea').classList.remove('open');
+            activePanel = null;
+            await window.ctfAPI.resizeSidebar(SIDEBAR_COLLAPSED);
+        }
+
+        // ===== Render Flags =====
+        function renderFlags() {
+            const body = document.getElementById('flagsBody');
+            body.innerHTML = '';
+
+            challenges.forEach(ch => {
+                const solved = solvedFlags[ch.id];
+                const div = document.createElement('div');
+                div.className = 'flag-step' + (solved ? ' solved' : '');
+
+                const header = document.createElement('div');
+                header.className = 'flag-header';
+                const title = document.createElement('div');
+                title.className = 'flag-title';
+                title.textContent = ch.step_number + '. ' + (ch.title || 'Flag ' + ch.step_number);
+                const points = document.createElement('div');
+                points.className = 'flag-points';
+                points.textContent = ch.points + 'pts';
+                header.appendChild(title);
+                header.appendChild(points);
+                div.appendChild(header);
+
+                if (ch.description) {
+                    const desc = document.createElement('div');
+                    desc.className = 'flag-desc';
+                    desc.textContent = ch.description;
+                    div.appendChild(desc);
+                }
+
+                if (solved) {
+                    const badge = document.createElement('div');
+                    badge.className = 'flag-solved-badge';
+                    badge.textContent = '✓ Solved';
+                    div.appendChild(badge);
+                } else {
+                    const row = document.createElement('div');
+                    row.className = 'flag-row';
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'flag-input';
+                    input.id = 'flag_' + ch.id;
+                    input.placeholder = 'Enter flag...';
+                    input.autocomplete = 'off';
+                    input.spellcheck = false;
+                    input.addEventListener('keydown', e => { if (e.key === 'Enter') submitFlag(ch.id); });
+                    const btn = document.createElement('button');
+                    btn.className = 'flag-submit';
+                    btn.textContent = 'Submit';
+                    btn.onclick = () => submitFlag(ch.id);
+                    row.appendChild(input);
+                    row.appendChild(btn);
+                    div.appendChild(row);
+                }
+
+                body.appendChild(div);
+            });
+
+            document.getElementById('myFlags').textContent = myFlagCount + '/' + challenges.length;
+        }
+
+        // ===== Submit Flag =====
+        async function submitFlag(challengeId) {
+            if (!sessionId || isKicked || eventEnded) return;
+
+            const input = document.getElementById('flag_' + challengeId);
+            const answer = input.value.trim();
+            if (!answer) return;
+
+            const now = Date.now();
+            if (submitFlag._lastTime && now - submitFlag._lastTime < 2000) return;
+            submitFlag._lastTime = now;
+
+            const res = await window.ctfAPI.request('/submit-flag', 'POST', {
+                session_id: sessionId,
+                challenge_id: challengeId,
+                answer: answer,
+            }, token);
+
+            if (res.status === 200) {
+                if (res.data.correct) {
+                    solvedFlags[challengeId] = true;
+                    myScore += res.data.points;
+                    myFlagCount++;
+                    updateScoreDisplay();
+                    renderFlags();
+                    addLog('You completed step ' + (challenges.find(c => c.id === challengeId)?.step_number || '?'), 'success');
+                } else {
+                    input.style.borderColor = 'var(--red)';
+                    setTimeout(() => input.style.borderColor = '', 1500);
+                    addLog('Incorrect flag submitted', 'error');
+                }
+            }
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('myScore').textContent = myScore;
+            document.getElementById('myFlags').textContent = myFlagCount + '/' + challenges.length;
+        }
+
+        // ===== Slot Validity Check =====
+        let slotCheckFailCount = 0;
+        async function checkSlotValidity() {
+            if (eventEnded || isKicked) return;
+            try {
+                const res = await window.ctfAPI.request('/slot/status/' + slot.slot_id, 'GET', null, token);
+                if (res.status === 404 || res.status === 403) {
+                    // Slot deleted or session removed by admin
+                    slotCheckFailCount++;
+                    if (slotCheckFailCount >= 2) {
+                        addLog('Session terminated by server', 'error');
+                        eventEnded = true;
+                        // Show overlay
+                        document.getElementById('kickOverlay').querySelector('h2').textContent = 'Session Ended';
+                        document.getElementById('kickOverlay').querySelector('p').textContent = 'This event slot has been removed by the admin.';
+                        document.getElementById('kickOverlay').style.display = 'flex';
+                        return;
+                    }
+                } else {
+                    slotCheckFailCount = 0;
+                    // Check if user was kicked
+                    if (res.status === 200 && res.data.players) {
+                        const me = res.data.players.find(p => p.user_id === user.id);
+                        if (me && me.is_kicked) {
+                            isKicked = true;
+                            document.getElementById('kickOverlay').style.display = 'flex';
+                        }
+                    }
+                }
+            } catch (e) {
+                // Network error — don't auto-exit, just log
+            }
+        }
+
+        // ===== Leaderboard =====
+        async function pollLeaderboard() {
+            if (eventEnded || isKicked) return;
+
+            const res = await window.ctfAPI.request('/leaderboard/' + slot.slot_id, 'GET', null, token);
+            if (res.status !== 200) return;
+
+            let leaderboard = res.data.leaderboard || [];
+
+            botProfiles.forEach(bot => {
+                const bp = botProgress[bot.id];
+                if (bp) {
+                    leaderboard.push({
+                        display_name: bot.display_name,
+                        avatar: bot.avatar,
+                        score: bp.score,
+                        flags_solved: bp.flags_solved,
+                        is_kicked: bp.kicked,
+                        is_bot: true,
+                    });
+                }
+            });
+
+            if (event.event_type === 'paid') {
+                const botEntries = leaderboard.filter(e => e.is_bot && !e.is_kicked).sort((a, b) => b.score - a.score);
+                const humanEntries = leaderboard.filter(e => !e.is_bot).sort((a, b) => b.score - a.score);
+                const kickedBots = leaderboard.filter(e => e.is_bot && e.is_kicked);
+                leaderboard = [...botEntries.slice(0, 3), ...humanEntries, ...botEntries.slice(3), ...kickedBots];
+            } else {
+                leaderboard.sort((a, b) => b.score - a.score);
+            }
+
+            const myIdx = leaderboard.findIndex(e => !e.is_bot && e.display_name === (user.display_name || user.username));
+            if (myIdx >= 0) {
+                document.getElementById('myRank').textContent = '#' + (myIdx + 1);
+            }
+
+            renderLeaderboard(leaderboard);
+        }
+
+        function renderLeaderboard(leaderboard) {
+            const body = document.getElementById('leaderboardBody');
+            body.innerHTML = '';
+
+            leaderboard.forEach((entry, idx) => {
+                const rank = idx + 1;
+                const div = document.createElement('div');
+                div.className = 'lb-entry' + (entry.is_kicked ? ' kicked' : '');
+
+                let rankClass = '';
+                if (rank === 1) rankClass = 'top1';
+                else if (rank === 2) rankClass = 'top2';
+                else if (rank === 3) rankClass = 'top3';
+
+                const initial = (entry.display_name || '?')[0].toUpperCase();
+                const defaultAvatar = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="50" fill="#16161e"/><text x="50" y="62" text-anchor="middle" fill="#6b6b80" font-size="36" font-family="Inter,sans-serif">' + initial + '</text></svg>');
+
+                let safeAvatarSrc = defaultAvatar;
+                if (entry.avatar && (entry.avatar.startsWith('https://') || entry.avatar.startsWith('data:image/'))) {
+                    safeAvatarSrc = entry.avatar;
+                }
+
+                div.innerHTML =
+                    '<div class="lb-rank ' + rankClass + '">' + rank + '</div>' +
+                    '<img class="lb-avatar" src="' + safeAvatarSrc + '" alt="">' +
+                    '<div class="lb-name">' + escapeHtml(entry.display_name || '') + (entry.is_kicked ? ' [removed]' : '') + '</div>' +
+                    '<div><div class="lb-score">' + entry.score + '</div><div class="lb-flags">' + entry.flags_solved + ' flags</div></div>';
+
+                body.appendChild(div);
+            });
+        }
+
+        // ===== Logs =====
+        function addLog(message, type) {
+            const now = new Date();
+            const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0');
+            logEntries.unshift({ time: timeStr, message, type });
+            if (logEntries.length > 50) logEntries.pop();
+            renderLogs();
+        }
+
+        async function pollLogs() {
+            if (eventEnded || isKicked) return;
+
+            const res = await window.ctfAPI.request('/logs/' + slot.slot_id, 'GET', null, token);
+            if (res.status === 200 && res.data.logs) {
+                res.data.logs.forEach(log => {
+                    const dedupKey = log.player + ':' + log.step + ':' + log.time;
+                    const exists = logEntries.find(l => l._key === dedupKey);
+                    if (!exists) {
+                        const ts = new Date(log.time.replace(' ', 'T'));
+                        const timeStr = String(ts.getHours()).padStart(2, '0') + ':' + String(ts.getMinutes()).padStart(2, '0') + ':' + String(ts.getSeconds()).padStart(2, '0');
+                        logEntries.unshift({ time: timeStr, message: log.message, type: 'info', _key: dedupKey });
+                    }
+                });
+                if (logEntries.length > 50) logEntries.length = 50;
+                renderLogs();
+            }
+        }
+
+        function renderLogs() {
+            const body = document.getElementById('logsBody');
+            body.innerHTML = '';
+            logEntries.forEach(log => {
+                const div = document.createElement('div');
+                div.className = 'log-entry';
+                const typeClass = log.type === 'kick' ? 'log-kick' : log.type === 'success' ? 'log-player' : 'log-action';
+                div.innerHTML = '<span class="log-time">[' + log.time + ']</span> <span class="' + typeClass + '">' + escapeHtml(log.message) + '</span>';
+                body.appendChild(div);
+            });
+        }
+
+        // ===== Bot Simulation =====
+        function simulateBots() {
+            if (botProfiles.length === 0) return;
+
+            botProfiles.forEach((bot, i) => {
+                setTimeout(() => {
+                    addLog(bot.display_name + ' joined the event', 'info');
+                }, 2000 + i * 1500 + Math.random() * 1000);
+            });
+
+            function botTick() {
+                if (eventEnded || isKicked) return;
+
+                botProfiles.forEach(bot => {
+                    const bp = botProgress[bot.id];
+                    if (bp.kicked || bp.flags_solved >= challenges.length) return;
+
+                    let chance = 0.02;
+                    if (bot.skill_level === 'fast') chance = 0.05;
+                    if (bot.skill_level === 'slow') chance = 0.01;
+
+                    if (Math.random() < chance) {
+                        bp.flags_solved++;
+                        const ch = challenges[bp.flags_solved - 1];
+                        bp.score += ch ? ch.points : 10;
+                        addLog(bot.display_name + ' solved "' + (ch ? ch.title : 'Step ' + bp.flags_solved) + '" (+' + (ch ? ch.points : 10) + 'pts)', 'info');
+                    } else if (Math.random() < 0.005) {
+                        addLog(bot.display_name + ' submitted an incorrect flag', 'error');
+                    }
+                });
+
+                if (Math.random() < 0.001) {
+                    const active = botProfiles.filter(b => !botProgress[b.id].kicked);
+                    if (active.length > 5) {
+                        const victim = active[Math.floor(Math.random() * active.length)];
+                        botProgress[victim.id].kicked = true;
+                        addLog(victim.display_name + ' has been removed — security violation', 'kick');
+                    }
+                }
+
+                setTimeout(botTick, 3000 + Math.random() * 5000);
+            }
+
+            setTimeout(botTick, 10000 + Math.random() * 20000);
+        }
+
+        // ===== Fake Notifications (Paid Only) =====
+        function scheduleFakeNotifications() {
+            if (notifications.length === 0) return;
+
+            const maxCount = 3;
+            const minInterval = 300000;
+            const maxInterval = 1200000;
+
+            function showNext() {
+                if (notifShown >= maxCount || eventEnded || isKicked) return;
+                const notif = notifications[Math.floor(Math.random() * notifications.length)];
+                showFakeNotification(notif);
+                notifShown++;
+                const delay = minInterval + Math.random() * (maxInterval - minInterval);
+                notifTimers.push(setTimeout(showNext, delay));
+            }
+
+            const firstDelay = 120000 + Math.random() * 360000;
+            notifTimers.push(setTimeout(showNext, firstDelay));
+        }
+
+        function showFakeNotification(notif) {
+            const el = document.getElementById('fakeNotif');
+            const iconEl = document.getElementById('notifIcon');
+            const appEl = document.getElementById('notifApp');
+            const msgEl = document.getElementById('notifMsg');
+
+            const iconMap = {
+                'Instagram': 'IG', 'Facebook': 'FB', 'WhatsApp': 'WA',
+                'Telegram': 'TG', 'Unknown': '??', 'Twitter': 'X', 'Signal': 'SG',
+            };
+
+            iconEl.textContent = iconMap[notif.app_name] || '??';
+            appEl.textContent = notif.app_name || 'Unknown';
+            msgEl.textContent = notif.message;
+
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 5000 + Math.random() * 3000);
+        }
+
+        // ===== Mic Monitoring (Volume Only) =====
+        let micStream = null;
+        let micAnalyser = null;
+
+        async function startMicMonitoring() {
+            try {
+                micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const audioCtx = new AudioContext();
+                const source = audioCtx.createMediaStreamSource(micStream);
+                micAnalyser = audioCtx.createAnalyser();
+                micAnalyser.fftSize = 256;
+                source.connect(micAnalyser);
+            } catch (e) { }
+        }
+
+        // ===== End Event =====
+        async function endEvent() {
+            if (eventEnded) return;
+            eventEnded = true;
+            notifTimers.forEach(t => clearTimeout(t));
+
+            // Expand sidebar to show result
+            await window.ctfAPI.resizeSidebar(SIDEBAR_EXPANDED);
+
+            document.getElementById('resultRank').textContent = document.getElementById('myRank').textContent || '#--';
+            document.getElementById('resultScore').textContent = myScore;
+            document.getElementById('resultFlags').textContent = myFlagCount;
+            document.getElementById('resultOverlay').classList.add('show');
+        }
+
+        // ===== Warning / Kick =====
+        function showWarning() {
+            warnings++;
+            document.getElementById('warningCount').textContent = warnings + '/3';
+            document.getElementById('myWarnings').textContent = warnings + '/3';
+            document.getElementById('warningOverlay').classList.add('show');
+
+            if (warnings >= 3) {
+                setTimeout(() => showKick(), 2000);
+            }
+        }
+
+        function dismissWarning() {
+            document.getElementById('warningOverlay').classList.remove('show');
+        }
+
+        function showKick() {
+            isKicked = true;
+            document.getElementById('kickOverlay').classList.add('show');
+        }
+
+        function exitAfterKick() {
+            window.ctfAPI.navigate('login.html');
+        }
+
+        // ===== Exit =====
+        async function showExitConfirm() {
+            await window.ctfAPI.resizeSidebar(SIDEBAR_EXPANDED);
+            document.getElementById('exitOverlay').classList.add('show');
+        }
+
+        async function cancelExit() {
+            document.getElementById('exitOverlay').classList.remove('show');
+            if (!activePanel) {
+                await window.ctfAPI.resizeSidebar(SIDEBAR_COLLAPSED);
+            }
+        }
+
+        async function confirmExit() {
+            if (sessionId) {
+                await window.ctfAPI.request('/end-session', 'POST', { session_id: sessionId, reason: 'user_exit' }, token);
+            }
+            window.ctfAPI.navigate('login.html');
+        }
+
+        function exitEvent() {
+            window.ctfAPI.navigate('login.html');
+        }
+
+        // ===== Utility =====
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+
+</html>

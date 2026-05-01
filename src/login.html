@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';">
+    <title>HackLayer CTF - Login</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="page-bg"></div>
+        <div class="login-box card-accent">
+            <h1>HACK<span class="hl">LAYER</span></h1>
+            <p class="subtitle">Capture The Flag</p>
+
+            <div class="error-msg" id="errorMsg"></div>
+
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="username" placeholder="Enter username" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="Enter password">
+            </div>
+
+            <div class="loading" id="loading">
+                <span class="spinner"></span> Authenticating...
+            </div>
+
+            <button class="btn" id="loginBtn" onclick="doLogin()">Access System</button>
+            <button class="btn btn-secondary" style="margin-top:8px;" onclick="window.ctfAPI.exitApp()">Exit</button>
+            <div class="version">v1.0</div>
+        </div>
+    </div>
+
+    <script>
+        // Block right click & shortcuts
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
+                e.preventDefault();
+            }
+        });
+
+        // Enter key to login
+        document.getElementById('password').addEventListener('keydown', e => {
+            if (e.key === 'Enter') doLogin();
+        });
+        document.getElementById('username').addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('password').focus();
+        });
+
+        async function doLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('errorMsg');
+            const loadingEl = document.getElementById('loading');
+            const btn = document.getElementById('loginBtn');
+
+            errorEl.classList.remove('show');
+            errorEl.textContent = '';
+
+            if (!username || !password) {
+                errorEl.textContent = 'Please enter username and password.';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            btn.disabled = true;
+            loadingEl.classList.add('show');
+
+            try {
+                const res = await window.ctfAPI.request('/login', 'POST', { username, password });
+
+                if (res.status === 200 && res.data.success) {
+                    // Store session data
+                    sessionStorage.setItem('ctf_token', res.data.token);
+                    sessionStorage.setItem('ctf_user', JSON.stringify(res.data.user));
+
+                    // Check for active session to resume (crash recovery)
+                    loadingEl.querySelector('span').nextSibling.textContent = ' Checking active session...';
+                    const resumeRes = await window.ctfAPI.request('/resume', 'GET', null, res.data.token);
+                    if (resumeRes.status === 200 && resumeRes.data.active) {
+                        // Active session found — resume directly into game
+                        const r = resumeRes.data;
+                        sessionStorage.setItem('ctf_event', JSON.stringify(r.event));
+                        sessionStorage.setItem('ctf_slot', JSON.stringify(r.slot));
+                        sessionStorage.setItem('ctf_resume', JSON.stringify(r.progress));
+                        window.ctfAPI.navigate('secure-env.html');
+                        return;
+                    }
+
+                    // No active session — normal flow
+                    window.ctfAPI.navigate('category.html');
+                } else {
+                    errorEl.textContent = res.data.error || 'Login failed. Check your credentials.';
+                    errorEl.classList.add('show');
+                }
+            } catch (err) {
+                errorEl.textContent = 'Connection error. Check your internet.';
+                errorEl.classList.add('show');
+            }
+
+            btn.disabled = false;
+            loadingEl.classList.remove('show');
+        }
+    </script>
+</body>
+
+</html>

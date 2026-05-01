@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HackLayer CTF - Setup</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="page-bg"></div>
+        <div class="login-box card-accent" style="width:440px;">
+            <h1>HACK<span class="hl">LAYER</span></h1>
+            <p class="subtitle">First Time Setup</p>
+
+            <div
+                style="background:rgba(0,232,123,0.06);border:1px solid rgba(0,232,123,0.15);border-radius:6px;padding:12px;margin-bottom:20px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
+                <strong style="color:var(--accent);">One-time setup</strong><br>
+                Enter your WordPress site URL and the API Secret from<br>
+                <span style="color:var(--text);font-family:var(--mono);font-size:11px;">WordPress → CTF Manager →
+                    Settings</span>
+            </div>
+
+            <div class="error-msg" id="errorMsg"></div>
+            <div class="success-msg" id="successMsg"
+                style="display:none;background:rgba(0,232,123,0.08);border:1px solid rgba(0,232,123,0.2);color:var(--accent);padding:10px 14px;border-radius:6px;margin-bottom:16px;font-size:13px;">
+            </div>
+
+            <div class="form-group">
+                <label>Site URL</label>
+                <input type="url" id="apiUrl" placeholder="https://hacklayer.com" autocomplete="off">
+                <small style="color:var(--text-muted);font-size:10px;margin-top:4px;display:block;">Your WordPress site
+                    URL (without /wp-json)</small>
+            </div>
+
+            <div class="form-group">
+                <label>API Secret</label>
+                <input type="password" id="apiSecret" placeholder="Paste 64-character secret from plugin settings"
+                    autocomplete="off">
+                <small style="color:var(--text-muted);font-size:10px;margin-top:4px;display:block;">CTF Manager →
+                    Settings → API Secret Key</small>
+            </div>
+
+            <div class="form-group">
+                <label>Admin Password</label>
+                <input type="password" id="adminPassword" placeholder="Set admin exit password for kiosk mode">
+                <small style="color:var(--text-muted);font-size:10px;margin-top:4px;display:block;">Used to exit kiosk
+                    mode (Ctrl+Shift+Alt+Q)</small>
+            </div>
+
+            <div class="form-group">
+                <label>Confirm Admin Password</label>
+                <input type="password" id="adminPasswordConfirm" placeholder="Re-enter admin password">
+            </div>
+
+            <div class="loading" id="loading">
+                <span class="spinner"></span> Saving configuration...
+            </div>
+
+            <button class="btn" id="saveBtn" onclick="saveSetup()">Save & Continue</button>
+            <button class="btn btn-secondary" style="margin-top:8px;" onclick="window.ctfAPI.exitApp()">Exit</button>
+            <div class="version">v1.0</div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        // Enter key navigation
+        document.getElementById('apiUrl').addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('apiSecret').focus();
+        });
+        document.getElementById('apiSecret').addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('adminPassword').focus();
+        });
+        document.getElementById('adminPassword').addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('adminPasswordConfirm').focus();
+        });
+        document.getElementById('adminPasswordConfirm').addEventListener('keydown', e => {
+            if (e.key === 'Enter') saveSetup();
+        });
+
+        async function saveSetup() {
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            const apiSecret = document.getElementById('apiSecret').value.trim();
+            const adminPassword = document.getElementById('adminPassword').value;
+            const adminPasswordConfirm = document.getElementById('adminPasswordConfirm').value;
+            const errorEl = document.getElementById('errorMsg');
+            const successEl = document.getElementById('successMsg');
+            const loadingEl = document.getElementById('loading');
+            const btn = document.getElementById('saveBtn');
+
+            errorEl.classList.remove('show');
+            successEl.style.display = 'none';
+
+            // Validate
+            if (!apiUrl) {
+                errorEl.textContent = 'Site URL is required.';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            if (!apiUrl.startsWith('https://')) {
+                errorEl.textContent = 'Site URL must start with https://';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            if (!apiSecret || apiSecret.length < 16) {
+                errorEl.textContent = 'API Secret is required (at least 16 characters).';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            if (!adminPassword || adminPassword.length < 6) {
+                errorEl.textContent = 'Admin password must be at least 6 characters.';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            if (adminPassword !== adminPasswordConfirm) {
+                errorEl.textContent = 'Passwords do not match.';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            btn.disabled = true;
+            loadingEl.classList.add('show');
+
+            // Build full API URL
+            const fullApiUrl = apiUrl.replace(/\/+$/, '') + '/wp-json/ctf/v1';
+
+            const result = await window.ctfAPI.saveConfig(fullApiUrl, apiSecret, adminPassword);
+
+            if (result.success) {
+                successEl.textContent = 'Configuration saved! Redirecting to login...';
+                successEl.style.display = 'block';
+                setTimeout(() => {
+                    window.ctfAPI.navigate('login.html');
+                }, 1500);
+            } else {
+                errorEl.textContent = 'Failed to save: ' + (result.error || 'Unknown error');
+                errorEl.classList.add('show');
+                btn.disabled = false;
+            }
+
+            loadingEl.classList.remove('show');
+        }
+    </script>
+</body>
+
+</html>

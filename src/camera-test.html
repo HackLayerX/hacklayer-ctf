@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; media-src blob: mediastream: *; object-src 'none'; base-uri 'none';">
+    <title>HackLayer CTF - Camera &amp; Mic Test</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0f;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .test-container {
+            width: 520px;
+            background: rgba(15, 15, 25, 0.95);
+            border: 1px solid rgba(0, 255, 136, 0.15);
+            border-radius: 12px;
+            padding: 32px;
+            text-align: center;
+        }
+
+        .test-title {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #00ff88;
+            margin-bottom: 6px;
+        }
+
+        .test-subtitle {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 24px;
+        }
+
+        /* Camera Preview */
+        .camera-box {
+            width: 100%;
+            height: 280px;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 20px;
+            border: 2px solid #222;
+        }
+
+        .camera-box.ok {
+            border-color: #00ff88;
+        }
+
+        .camera-box.fail {
+            border-color: #ef4444;
+        }
+
+        .camera-box video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .camera-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 13px;
+        }
+
+        .camera-placeholder svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 10px;
+            stroke: #444;
+        }
+
+        /* Status Rows */
+        .status-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .status-row .label {
+            font-size: 13px;
+            color: #aaa;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-row .label svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .status-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-badge.waiting {
+            background: rgba(255, 255, 255, 0.08);
+            color: #666;
+        }
+
+        .status-badge.testing {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+
+        .status-badge.pass {
+            background: rgba(0, 255, 136, 0.12);
+            color: #00ff88;
+        }
+
+        .status-badge.fail {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
+        /* Mic Level */
+        .mic-level-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .mic-level-fill {
+            height: 100%;
+            width: 0%;
+            background: #00ff88;
+            border-radius: 3px;
+            transition: width 0.1s ease;
+        }
+
+        /* Buttons */
+        .test-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-start {
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .btn-start:hover {
+            background: rgba(0, 255, 136, 0.2);
+        }
+
+        .btn-continue {
+            background: #00ff88;
+            color: #000;
+        }
+
+        .btn-continue:hover {
+            background: #00cc6a;
+        }
+
+        .btn-continue:disabled {
+            background: rgba(255, 255, 255, 0.05);
+            color: #444;
+            cursor: not-allowed;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-retry {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .error-msg {
+            color: #ef4444;
+            font-size: 11px;
+            margin-top: 8px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="test-container">
+        <div class="test-title">Device Check</div>
+        <div class="test-subtitle">Camera &amp; Microphone are required for anti-cheat monitoring</div>
+
+        <!-- Camera Preview -->
+        <div class="camera-box" id="cameraBox">
+            <video id="cameraPreview" autoplay muted playsinline style="display:none;"></video>
+            <div class="camera-placeholder" id="cameraPlaceholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M23 7l-7 5 7 5V7z" />
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+                <span>Camera preview will appear here</span>
+            </div>
+        </div>
+
+        <!-- Camera Status -->
+        <div class="status-row">
+            <div class="label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="23 7l-7 5 7 5V7z" />
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+                Camera
+            </div>
+            <span class="status-badge waiting" id="camStatus">WAITING</span>
+        </div>
+
+        <!-- Mic Status -->
+        <div class="status-row">
+            <div class="label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                    <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" />
+                </svg>
+                Microphone
+            </div>
+            <span class="status-badge waiting" id="micStatus">WAITING</span>
+        </div>
+        <div class="mic-level-bar" id="micLevelBar" style="display:none;">
+            <div class="mic-level-fill" id="micLevelFill"></div>
+        </div>
+
+        <!-- Face Detection Status -->
+        <div class="status-row">
+            <div class="label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <circle cx="12" cy="8" r="5" />
+                    <path d="M20 21a8 8 0 00-16 0" />
+                </svg>
+                Face Detection
+            </div>
+            <span class="status-badge waiting" id="faceStatus">WAITING</span>
+        </div>
+
+        <!-- Error Message -->
+        <div class="error-msg" id="errorMsg"></div>
+
+        <!-- Buttons -->
+        <!-- Debug Log -->
+        <div id="debugLog"
+            style="text-align:left;font-family:'Courier New',monospace;font-size:10px;color:#666;background:rgba(0,0,0,0.3);border-radius:6px;padding:8px;margin-top:12px;max-height:80px;overflow-y:auto;display:none;">
+        </div>
+
+        <button class="test-btn btn-start" id="startBtn" onclick="startTest()">Start Device Test</button>
+        <button class="test-btn btn-continue" id="continueBtn" onclick="continueToGame()" disabled
+            style="display:none;">Continue to Event</button>
+        <button class="test-btn btn-retry" id="retryBtn" onclick="retryTest()" style="display:none;">Retry Test</button>
+    </div>
+
+    <script>
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        let mediaStream = null;
+        let micAnalyser = null;
+        let micAnimFrame = null;
+        let testPassed = false;
+        let faceDetector = null;
+
+        function debugLog(msg) {
+            const el = document.getElementById('debugLog');
+            if (el) {
+                el.style.display = 'block';
+                const line = document.createElement('div');
+                line.textContent = new Date().toLocaleTimeString() + ' | ' + msg;
+                el.appendChild(line);
+                el.scrollTop = el.scrollHeight;
+            }
+        }
+
+        // Auto-start test on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(startTest, 500);
+        });
+
+        async function startTest() {
+            const camStatus = document.getElementById('camStatus');
+            const micStatus = document.getElementById('micStatus');
+            const faceStatus = document.getElementById('faceStatus');
+            const cameraBox = document.getElementById('cameraBox');
+            const errorMsg = document.getElementById('errorMsg');
+            const startBtn = document.getElementById('startBtn');
+
+            // Reset UI
+            errorMsg.style.display = 'none';
+            startBtn.style.display = 'none';
+            document.getElementById('retryBtn').style.display = 'none';
+            document.getElementById('continueBtn').style.display = 'none';
+            document.getElementById('continueBtn').disabled = true;
+            camStatus.textContent = 'TESTING'; camStatus.className = 'status-badge testing';
+            micStatus.textContent = 'TESTING'; micStatus.className = 'status-badge testing';
+            faceStatus.textContent = 'WAITING'; faceStatus.className = 'status-badge waiting';
+
+            debugLog('Starting device test...');
+
+            // Check mediaDevices API
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                debugLog('ERROR: navigator.mediaDevices.getUserMedia NOT available!');
+                showError('Media API not available. Contact admin.');
+                camStatus.textContent = 'FAIL'; camStatus.className = 'status-badge fail';
+                micStatus.textContent = 'FAIL'; micStatus.className = 'status-badge fail';
+                return;
+            }
+            debugLog('mediaDevices API: OK');
+
+            // Enumerate devices
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const cams = devices.filter(d => d.kind === 'videoinput');
+                const mics = devices.filter(d => d.kind === 'audioinput');
+                debugLog('Found ' + cams.length + ' camera(s), ' + mics.length + ' mic(s)');
+                cams.forEach((c, i) => debugLog('  cam' + i + ': ' + (c.label || 'unnamed')));
+                mics.forEach((m, i) => debugLog('  mic' + i + ': ' + (m.label || 'unnamed')));
+
+                if (cams.length === 0 || mics.length === 0) {
+                    debugLog('WARNING: Devices not visible');
+                    errorMsg.innerHTML = '<b>Devices not detected!</b><br><br>' +
+                        'Windows may be blocking access:<br>' +
+                        '1. Open <b>Windows Settings</b> (Win + I)<br>' +
+                        '2. Go to <b>Privacy &amp; Security → Camera</b><br>' +
+                        '3. Turn ON "<b>Let desktop apps access your camera</b>"<br>' +
+                        '4. Also check <b>Privacy → Microphone</b><br>' +
+                        '5. Click <b>Retry</b>';
+                    errorMsg.style.display = 'block';
+                    if (cams.length === 0) { camStatus.textContent = 'NOT FOUND'; camStatus.className = 'status-badge fail'; }
+                    if (mics.length === 0) { micStatus.textContent = 'NOT FOUND'; micStatus.className = 'status-badge fail'; }
+                    document.getElementById('retryBtn').style.display = 'block';
+                }
+            } catch (enumErr) {
+                debugLog('enumerateDevices error: ' + enumErr.message);
+            }
+
+            // === ACQUIRE CAMERA + MIC ===
+            try {
+                debugLog('Requesting getUserMedia({video:true, audio:true})...');
+                mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                debugLog('getUserMedia SUCCESS — tracks: ' + mediaStream.getTracks().length);
+
+                // Show camera preview
+                const videoEl = document.getElementById('cameraPreview');
+                videoEl.srcObject = mediaStream;
+                videoEl.style.display = 'block';
+                document.getElementById('cameraPlaceholder').style.display = 'none';
+
+                // Wait for video to actually play
+                await new Promise((resolve) => {
+                    videoEl.onplaying = () => { debugLog('Video PLAYING'); resolve(); };
+                    setTimeout(() => resolve(), 5000);
+                });
+
+                camStatus.textContent = 'PASS';
+                camStatus.className = 'status-badge pass';
+                cameraBox.classList.add('ok');
+
+                // === Parallel: Face + Mic ===
+                const faceResult = runFaceDetection(videoEl, faceStatus);
+                const micResult = runMicCheck(micStatus);
+                const [faceOk, micOk] = await Promise.all([faceResult, micResult]);
+
+                if (!faceOk) {
+                    faceStatus.textContent = 'FAIL — NO FACE';
+                    faceStatus.className = 'status-badge fail';
+                    showError('Face not detected! Sit in front of camera with good lighting, then click Retry.');
+                    return;
+                }
+
+                // ALL PASSED
+                faceStatus.textContent = 'PASS — FACE FOUND';
+                faceStatus.className = 'status-badge pass';
+
+                testPassed = true;
+                const btn = document.getElementById('continueBtn');
+                btn.disabled = false;
+                btn.style.display = 'block';
+
+                // Auto-continue after 3 seconds (user can click sooner)
+                let countdown = 3;
+                btn.textContent = 'CONTINUING IN ' + countdown + '...';
+                const autoTimer = setInterval(() => {
+                    countdown--;
+                    if (countdown <= 0) {
+                        clearInterval(autoTimer);
+                        if (testPassed && !btn.disabled) continueToGame();
+                    } else {
+                        btn.textContent = 'CONTINUING IN ' + countdown + '...';
+                    }
+                }, 1000);
+                // Let user click to skip countdown
+                btn.onclick = () => { clearInterval(autoTimer); continueToGame(); };
+
+            } catch (err) {
+                debugLog('ERROR: ' + err.name + ' — ' + err.message);
+                showError(err.name + ': ' + err.message);
+
+                if (!mediaStream || !mediaStream.getVideoTracks().length) {
+                    camStatus.textContent = 'FAIL'; camStatus.className = 'status-badge fail';
+                    cameraBox.classList.add('fail');
+                }
+                if (!mediaStream || !mediaStream.getAudioTracks().length) {
+                    micStatus.textContent = 'FAIL'; micStatus.className = 'status-badge fail';
+                }
+            }
+        }
+
+        // === FACE DETECTION ===
+        async function runFaceDetection(videoEl, faceStatus) {
+            faceStatus.textContent = 'SCANNING';
+            faceStatus.className = 'status-badge testing';
+            debugLog('Starting face detection...');
+
+            // Init FaceDetector
+            if (!faceDetector && typeof FaceDetector !== 'undefined') {
+                faceDetector = new FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+                debugLog('FaceDetector API available');
+            } else if (!faceDetector) {
+                debugLog('FaceDetector API NOT available — fallback mode');
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 320; canvas.height = 240;
+            const ctx = canvas.getContext('2d');
+
+            for (let attempt = 0; attempt < 15; attempt++) {
+                await new Promise(r => setTimeout(r, 800));
+                ctx.drawImage(videoEl, 0, 0, 320, 240);
+
+                if (faceDetector) {
+                    try {
+                        const faces = await faceDetector.detect(canvas);
+                        debugLog('Scan #' + (attempt + 1) + ': ' + faces.length + ' face(s)');
+                        if (faces.length > 0) {
+                            const f = faces[0].boundingBox;
+                            debugLog('  Face: x=' + Math.round(f.x) + ' y=' + Math.round(f.y) +
+                                ' w=' + Math.round(f.width) + ' h=' + Math.round(f.height));
+                            return true;
+                        }
+                    } catch (e) { debugLog('FaceDetector error: ' + e.message); }
+                } else {
+                    // Fallback: skin-tone analysis
+                    const imgData = ctx.getImageData(60, 30, 200, 180);
+                    let skinPx = 0, totalPx = 0;
+                    for (let i = 0; i < imgData.data.length; i += 16) {
+                        const r = imgData.data[i], g = imgData.data[i + 1], b = imgData.data[i + 2];
+                        totalPx++;
+                        if (r > 95 && g > 40 && b > 20 && r > g && r > b &&
+                            Math.abs(r - g) > 15 && r - b > 15) skinPx++;
+                    }
+                    const ratio = skinPx / totalPx;
+                    debugLog('Scan #' + (attempt + 1) + ': skin=' + (ratio * 100).toFixed(1) + '%');
+                    if (ratio > 0.15) return true;
+                }
+                faceStatus.textContent = 'SCANNING (' + (attempt + 1) + '/15)';
+            }
+            return false;
+        }
+
+        // === MIC CHECK ===
+        function runMicCheck(micStatus) {
+            return new Promise((resolve) => {
+                const micLevelBar = document.getElementById('micLevelBar');
+                const micLevelFill = document.getElementById('micLevelFill');
+                try {
+                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const source = audioCtx.createMediaStreamSource(mediaStream);
+                    micAnalyser = audioCtx.createAnalyser();
+                    micAnalyser.fftSize = 256;
+                    source.connect(micAnalyser);
+
+                    const dataArray = new Uint8Array(micAnalyser.frequencyBinCount);
+                    micLevelBar.style.display = 'block';
+
+                    function checkMic() {
+                        micAnalyser.getByteFrequencyData(dataArray);
+                        let sum = 0;
+                        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                        const avg = sum / dataArray.length;
+                        const pct = Math.min(100, (avg / 128) * 100);
+                        micLevelFill.style.width = pct + '%';
+                        if (avg > 3) micLevelFill.style.background = '#00ff88';
+                        micAnimFrame = requestAnimationFrame(checkMic);
+                    }
+                    checkMic();
+
+                    // Mic connected = pass after 2 seconds
+                    setTimeout(() => {
+                        micStatus.textContent = 'PASS';
+                        micStatus.className = 'status-badge pass';
+                        resolve(true);
+                    }, 2000);
+                } catch (e) {
+                    debugLog('Mic error: ' + e.message);
+                    resolve(false);
+                }
+            });
+        }
+
+        function showError(msg) {
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.textContent = msg;
+            errorMsg.style.display = 'block';
+            document.getElementById('retryBtn').style.display = 'block';
+        }
+
+        function retryTest() {
+            // Cleanup
+            if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+            if (micAnimFrame) cancelAnimationFrame(micAnimFrame);
+
+            const videoEl = document.getElementById('cameraPreview');
+            videoEl.srcObject = null;
+            videoEl.style.display = 'none';
+            document.getElementById('cameraPlaceholder').style.display = 'flex';
+            document.getElementById('cameraBox').className = 'camera-box';
+            document.getElementById('micLevelBar').style.display = 'none';
+            document.getElementById('micLevelFill').style.width = '0%';
+            document.getElementById('debugLog').innerHTML = '';
+
+            testPassed = false;
+            startTest();
+        }
+
+        function continueToGame() {
+            if (!testPassed) return;
+
+            // Stop streams — secure-env will acquire its own
+            if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); }
+            if (micAnimFrame) cancelAnimationFrame(micAnimFrame);
+
+            window.ctfAPI.navigate('secure-env.html');
+        }
+    </script>
+</body>
+
+</html>

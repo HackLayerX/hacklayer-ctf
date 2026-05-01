@@ -1,0 +1,529 @@
+/* ==================== HACKLAYER MODE ==================== */
+
+.hl-env {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.hl-env #boat-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+/* ===== RIGHT SIDEBAR ===== */
+.hl-sidebar {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 64px;
+    background: rgba(8, 8, 12, 0.85);
+    backdrop-filter: blur(16px);
+    border-left: 1px solid rgba(0, 232, 123, 0.06);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    z-index: 100;
+    gap: 4px;
+}
+
+/* Timer at top */
+.hl-timer-box {
+    text-align: center;
+    padding: 8px 4px 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+    width: 100%;
+}
+
+.hl-timer {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 1px;
+}
+
+.hl-timer-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.hl-timer-label span {
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.hl-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: hlPulse 2s infinite;
+}
+
+@keyframes hlPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+/* User info below timer */
+.hl-user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 4px 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+    width: 100%;
+    gap: 4px;
+}
+
+.hl-user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 232, 123, 0.15);
+}
+
+.hl-user-name {
+    font-size: 8px;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    text-align: center;
+    max-width: 56px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Sidebar Buttons */
+.hl-buttons {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+}
+
+.hl-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 6px 0;
+    gap: 2px;
+}
+
+.hl-btn svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.hl-btn span {
+    font-size: 8px;
+    font-family: var(--font);
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+.hl-btn:hover {
+    background: rgba(0, 232, 123, 0.06);
+    color: var(--text);
+}
+
+.hl-btn.active {
+    background: rgba(0, 232, 123, 0.1);
+    color: var(--accent);
+}
+
+/* Exit button at bottom */
+.hl-exit-btn {
+    margin-top: auto;
+    margin-bottom: 4px;
+    color: var(--red) !important;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    border-radius: 0 0 0 0;
+    width: 52px;
+    height: 52px;
+}
+
+.hl-exit-btn:hover {
+    background: rgba(239, 68, 68, 0.1) !important;
+    color: var(--red) !important;
+}
+
+/* ===== PANELS (slide from right, next to sidebar) ===== */
+.hl-panel {
+    position: fixed;
+    right: 64px;
+    top: 0;
+    bottom: 0;
+    width: 320px;
+    background: rgba(10, 10, 16, 0.92);
+    backdrop-filter: blur(20px);
+    border-left: 1px solid var(--border);
+    z-index: 90;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+}
+
+.hl-panel.open {
+    transform: translateX(0);
+}
+
+.hl-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+}
+
+.hl-panel-header h3 {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.hl-panel-close {
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.hl-panel-close:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.hl-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+}
+
+/* ===== LEADERBOARD ENTRIES (reuse from secure-env) ===== */
+.hl-panel-body .lb-entry {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+}
+
+.hl-panel-body .lb-entry:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.hl-panel-body .lb-rank {
+    width: 24px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.hl-panel-body .lb-rank.top1 {
+    color: #ffd700;
+}
+
+.hl-panel-body .lb-rank.top2 {
+    color: #c0c0c0;
+}
+
+.hl-panel-body .lb-rank.top3 {
+    color: #cd7f32;
+}
+
+.hl-panel-body .lb-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+}
+
+.hl-panel-body .lb-name {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hl-panel-body .lb-score {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.hl-panel-body .lb-flags {
+    font-size: 9px;
+    color: var(--text-muted);
+    text-align: right;
+}
+
+/* ===== FLAGS IN PANEL ===== */
+.hl-panel-body .flag-step {
+    display: block;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.hl-panel-body .flag-step.solved {
+    border-color: rgba(0, 232, 123, 0.2);
+    background: rgba(0, 232, 123, 0.03);
+}
+
+.hl-panel-body .flag-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.hl-panel-body .flag-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.hl-panel-body .flag-points {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+}
+
+.hl-panel-body .flag-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+
+.hl-panel-body .flag-row {
+    display: flex;
+    gap: 6px;
+}
+
+.hl-panel-body .flag-input {
+    flex: 1;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    outline: none;
+}
+
+.hl-panel-body .flag-input:focus {
+    border-color: var(--accent);
+}
+
+.hl-panel-body .flag-submit {
+    padding: 7px 14px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.hl-panel-body .flag-submit:hover {
+    background: var(--accent-dim);
+}
+
+.hl-panel-body .flag-solved-badge {
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* ===== LOG ENTRIES IN PANEL ===== */
+.hl-panel-body .log-entry {
+    padding: 4px 0;
+    font-size: 11px;
+    font-family: var(--mono);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.hl-panel-body .log-time {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.hl-panel-body .log-player {
+    color: var(--accent);
+}
+
+.hl-panel-body .log-action {
+    color: var(--text-secondary);
+}
+
+.hl-panel-body .log-kick {
+    color: var(--red);
+}
+
+/* ===== SCORE GRID ===== */
+.hl-panel-body .score-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.hl-panel-body .score-item {
+    text-align: center;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.hl-panel-body .score-value {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.hl-panel-body .score-value.accent {
+    color: var(--accent);
+}
+
+.hl-panel-body .score-value.amber {
+    color: var(--amber);
+}
+
+.hl-panel-body .score-label {
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 4px;
+}
+
+/* ===== HACKER NOTIFICATION (center pop) ===== */
+.hl-notif {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: rgba(10, 10, 16, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 200;
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    min-width: 280px;
+}
+
+.hl-notif.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+.hl-notif-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    background: rgba(0, 232, 123, 0.1);
+    color: var(--accent);
+    flex-shrink: 0;
+}
+
+.hl-notif-app {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.5px;
+}
+
+.hl-notif-msg {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.hl-exit-box h2 {
+    color: var(--text);
+    font-size: 16px;
+    margin-bottom: 4px;
+}
+
+/* ===== WATERMARK ===== */
+.hl-env .watermark {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 80px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.008);
+    letter-spacing: 10px;
+    pointer-events: none;
+    z-index: 1;
+    transform: rotate(-15deg);
+    white-space: nowrap;
+    user-select: none;
+}

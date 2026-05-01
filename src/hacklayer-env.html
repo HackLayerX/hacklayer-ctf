@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'none'; object-src 'none'; base-uri 'none';">
+    <title>HackLayer CTF - Wallpaper</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #020205;
+        }
+
+        #boat-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .watermark {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.008);
+            letter-spacing: 10px;
+            pointer-events: none;
+            z-index: 1;
+            transform: rotate(-15deg);
+            white-space: nowrap;
+            user-select: none;
+        }
+
+        #introOverlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            pointer-events: none;
+            transition: opacity 1.5s ease;
+        }
+
+        #introText {
+            font-family: 'Courier New', monospace;
+            color: rgba(0, 255, 136, 0.7);
+            font-size: 14px;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            opacity: 0;
+            transition: opacity 2s ease;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        #introSubtext {
+            font-family: 'Courier New', monospace;
+            color: rgba(100, 120, 130, 0.5);
+            font-size: 11px;
+            letter-spacing: 3px;
+            margin-top: 12px;
+            opacity: 0;
+            transition: opacity 2s ease 0.5s;
+        }
+
+        #introLoader {
+            width: 120px;
+            height: 1px;
+            background: rgba(0, 255, 136, 0.1);
+            margin-top: 24px;
+            border-radius: 1px;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 1s ease 1s;
+        }
+
+        #introProgress {
+            width: 0%;
+            height: 100%;
+            background: rgba(0, 255, 136, 0.6);
+            transition: width 4s ease-in-out;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="boat-canvas"></canvas>
+
+    <!-- Cinematic Intro -->
+    <div id="introOverlay">
+        <div id="introText">HACKLAYER MODE ACTIVE</div>
+        <div id="introSubtext">IMMERSIVE ENVIRONMENT LOADING</div>
+        <div id="introLoader">
+            <div id="introProgress"></div>
+        </div>
+    </div>
+
+    <div class="watermark" id="watermark"></div>
+
+    <script src="js/boat-animation.js"></script>
+    <script>
+        // Cinematic intro
+        setTimeout(() => {
+            document.getElementById('introText').style.opacity = '1';
+            document.getElementById('introSubtext').style.opacity = '1';
+            document.getElementById('introLoader').style.opacity = '1';
+        }, 1500);
+        setTimeout(() => {
+            document.getElementById('introProgress').style.width = '100%';
+        }, 2000);
+        setTimeout(() => {
+            const ov = document.getElementById('introOverlay');
+            ov.style.opacity = '0';
+            setTimeout(() => ov.remove(), 2000);
+        }, 6500);
+
+        // Watermark from session
+        (async () => {
+            const data = await window.ctfAPI.getSessionData();
+            if (data && data.user) {
+                const u = JSON.parse(data.user);
+                const wmText = (u.username + '  ' + u.id + '  ').repeat(6);
+                document.getElementById('watermark').textContent = wmText;
+            }
+        })();
+    </script>
+</body>
+
+</html>

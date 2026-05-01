@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; media-src blob: mediastream:;">
+    <title>HackLayer CTF - Lobby</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="lobby-container">
+        <canvas id="boat-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;"></canvas>
+        <div class="page-bg"></div>
+        <div class="lobby-box card-accent">
+            <div class="lobby-event-title" id="eventTitle">Loading...</div>
+            <div class="lobby-category" id="eventCategory"></div>
+
+            <div class="lobby-slot-time" id="slotTime" style="margin-top:16px;"></div>
+            <div class="lobby-timer" id="timer">--:--</div>
+            <div class="lobby-timer-label" id="timerLabel">Starting in</div>
+
+            <div class="lobby-players" id="playerGrid"></div>
+
+            <div class="player-count">
+                <span id="playerCount">0</span> / <span id="maxPlayers">50</span> players
+            </div>
+
+            <div class="lobby-hint">Matchmaking in progress</div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        const token = sessionStorage.getItem('ctf_token');
+        const user = JSON.parse(sessionStorage.getItem('ctf_user') || '{}');
+        const event = JSON.parse(sessionStorage.getItem('ctf_event') || '{}');
+        const slot = JSON.parse(sessionStorage.getItem('ctf_slot') || '{}');
+
+        if (!token || !slot.slot_id) window.ctfAPI.navigate('login.html');
+
+        document.getElementById('eventTitle').textContent = event.event_title || 'Event';
+        document.getElementById('eventCategory').textContent = slot.category || '';
+        document.getElementById('maxPlayers').textContent = slot.max_players || 50;
+
+        // Show actual slot time
+        const startTime = new Date(slot.starts_at?.replace(' ', 'T'));
+        const endTime = slot.ends_at ? new Date(slot.ends_at?.replace(' ', 'T')) : null;
+        const timeOpts = { hour: '2-digit', minute: '2-digit', hour12: true };
+        const dateOpts = { day: 'numeric', month: 'short' };
+
+        let slotTimeText = startTime.toLocaleTimeString('en-US', timeOpts);
+        if (endTime) slotTimeText += ' — ' + endTime.toLocaleTimeString('en-US', timeOpts);
+        slotTimeText += '  •  ' + startTime.toLocaleDateString('en-US', dateOpts);
+        document.getElementById('slotTime').textContent = slotTimeText;
+
+        let players = [];
+        let bots = [];
+        let botsAdded = [];
+        let timerInterval = null;
+
+        // Calculate time remaining
+        function updateTimer() {
+            const now = new Date();
+            const start = new Date(slot.starts_at?.replace(' ', 'T'));
+            const diff = start - now;
+
+            if (diff <= 0) {
+                clearInterval(timerInterval);
+                document.getElementById('timer').textContent = 'LIVE NOW';
+                document.getElementById('timer').style.color = 'var(--accent)';
+                document.getElementById('timerLabel').textContent = 'Event is running';
+                // Navigate to camera test screen before entering game
+                setTimeout(() => {
+                    window.ctfAPI.navigate('camera-test.html');
+                }, 2000);
+                return;
+            }
+
+            const mins = Math.floor(diff / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+
+            if (mins > 0) {
+                document.getElementById('timer').textContent =
+                    String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+                document.getElementById('timerLabel').textContent = 'Starting in';
+            } else {
+                document.getElementById('timer').textContent = String(secs) + 's';
+                document.getElementById('timer').style.color = 'var(--accent)';
+                document.getElementById('timerLabel').textContent = 'Almost there...';
+            }
+        }
+
+        timerInterval = setInterval(updateTimer, 1000);
+        updateTimer();
+
+        // Fetch slot status and bots
+        async function fetchStatus() {
+            try {
+                const res = await window.ctfAPI.request(`/slot/status/${slot.slot_id}`, 'GET', null, token);
+                if (res.status === 200) {
+                    players = res.data.players || [];
+                }
+
+                const botRes = await window.ctfAPI.request(`/bots/${slot.slot_id}`, 'GET', null, token);
+                if (botRes.status === 200) {
+                    bots = botRes.data.bots || [];
+                }
+            } catch (e) { }
+        }
+
+        // Gradually add bots
+        function scheduleBot() {
+            if (botsAdded.length >= bots.length) return;
+
+            const now = new Date();
+            const start = new Date((slot.starts_at || '').replace(' ', 'T'));
+            const totalWait = start - now;
+
+            // Random interval: more frequent near end
+            const remaining = bots.length - botsAdded.length;
+            let minDelay = 5000;
+            let maxDelay = Math.max(10000, totalWait / remaining);
+
+            // Last 5 minutes = faster
+            if (totalWait < 300000) {
+                minDelay = 2000;
+                maxDelay = 8000;
+            }
+
+            const delay = minDelay + Math.random() * (maxDelay - minDelay);
+
+            setTimeout(() => {
+                if (botsAdded.length < bots.length) {
+                    const bot = bots[botsAdded.length];
+                    botsAdded.push(bot);
+                    renderPlayers();
+                    scheduleBot();
+                }
+            }, delay);
+        }
+
+        function renderPlayers() {
+            const grid = document.getElementById('playerGrid');
+            grid.innerHTML = '';
+
+            function esc(str) {
+                const d = document.createElement('div');
+                d.textContent = str || '';
+                return d.innerHTML;
+            }
+
+            function defaultAvatar(name) {
+                const initial = encodeURIComponent((name || '?')[0]);
+                return `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23333%22/><text x=%2250%22 y=%2260%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2240%22>${initial}</text></svg>`;
+            }
+
+            // Real players
+            players.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'player-circle';
+                const img = document.createElement('img');
+                img.src = p.avatar || defaultAvatar(p.display_name);
+                img.title = p.display_name || '';
+                div.appendChild(img);
+                grid.appendChild(div);
+            });
+
+            // Bots added so far
+            botsAdded.forEach(b => {
+                const div = document.createElement('div');
+                div.className = 'player-circle joining';
+                const img = document.createElement('img');
+                img.src = b.avatar || defaultAvatar(b.display_name);
+                img.title = b.display_name || '';
+                div.appendChild(img);
+                grid.appendChild(div);
+            });
+
+            document.getElementById('playerCount').textContent = players.length + botsAdded.length;
+        }
+
+        // Init
+        (async () => {
+            await fetchStatus();
+            renderPlayers();
+            scheduleBot();
+        })();
+
+        // Refresh real players every 15s
+        setInterval(async () => {
+            await fetchStatus();
+            renderPlayers();
+        }, 15000);
+    </script>
+    <script src="js/boat-animation.js"></script>
+</body>
+
+</html>

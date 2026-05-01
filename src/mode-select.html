@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';">
+    <title>HackLayer CTF - Select Mode</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .mode-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: transparent;
+            position: relative;
+        }
+
+        .mode-title {
+            color: var(--text);
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .mode-subtitle {
+            color: var(--text-muted);
+            font-size: 12px;
+            letter-spacing: 1px;
+            margin-bottom: 40px;
+        }
+
+        .mode-cards {
+            display: flex;
+            gap: 24px;
+            z-index: 1;
+        }
+
+        .mode-card {
+            width: 260px;
+            background: rgba(12, 12, 18, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mode-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(0, 232, 123, 0.08);
+        }
+
+        .mode-card.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 2px;
+            background: var(--accent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .mode-card:hover::before {
+            opacity: 1;
+        }
+
+        .mode-icon {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 16px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mode-icon svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .mode-icon.hacklayer-icon {
+            background: rgba(0, 232, 123, 0.08);
+            border: 1px solid rgba(0, 232, 123, 0.15);
+            color: var(--accent);
+        }
+
+        .mode-icon.user-icon {
+            background: rgba(59, 130, 246, 0.08);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            color: var(--blue);
+        }
+
+        .mode-name {
+            color: var(--text);
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .mode-desc {
+            color: var(--text-secondary);
+            font-size: 11px;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .mode-badge {
+            display: inline-block;
+            font-size: 9px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .badge-premium {
+            background: rgba(0, 232, 123, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(0, 232, 123, 0.2);
+        }
+
+        .badge-standard {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--blue);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .mode-features {
+            margin-top: 16px;
+            text-align: left;
+        }
+
+        .mode-feature {
+            color: var(--text-secondary);
+            font-size: 10px;
+            padding: 3px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .mode-feature::before {
+            content: '›';
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .user-card .mode-feature::before {
+            color: var(--blue);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="mode-container">
+        <canvas id="boat-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;"></canvas>
+
+        <div style="z-index:1;text-align:center;">
+            <div class="mode-title">SELECT MODE</div>
+            <div class="mode-subtitle" id="eventName"></div>
+        </div>
+
+        <div class="mode-cards">
+            <!-- HackLayer Mode -->
+            <div class="mode-card" id="hacklayerCard" onclick="selectMode('hacklayer')">
+                <div class="mode-icon hacklayer-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                    </svg>
+                </div>
+                <div class="mode-name">HackLayer Mode</div>
+                <div class="mode-desc">Immersive hacker environment. Animated desktop background with floating sidebar
+                    controls.</div>
+                <span class="mode-badge badge-premium">PREMIUM</span>
+                <div class="mode-features">
+                    <div class="mode-feature">Animated boat background</div>
+                    <div class="mode-feature">Right sidebar controls</div>
+                    <div class="mode-feature">Hacker notifications</div>
+                    <div class="mode-feature">Full PC access</div>
+                </div>
+            </div>
+
+            <!-- User Mode -->
+            <div class="mode-card user-card" id="userCard" onclick="selectMode('user')">
+                <div class="mode-icon user-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="2" y="3" width="20" height="14" rx="2" />
+                        <path d="M8 21h8M12 17v4" />
+                    </svg>
+                </div>
+                <div class="mode-name">User Mode</div>
+                <div class="mode-desc">Standard dashboard window. Minimize and use your own tools freely.</div>
+                <span class="mode-badge badge-standard">STANDARD</span>
+                <div class="mode-features user-card">
+                    <div class="mode-feature">Regular window</div>
+                    <div class="mode-feature">Minimize / Alt+Tab</div>
+                    <div class="mode-feature">Use external tools</div>
+                    <div class="mode-feature">Flag submission portal</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/boat-animation.js"></script>
+    <script>
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        const event = JSON.parse(sessionStorage.getItem('ctf_event') || '{}');
+        document.getElementById('eventName').textContent = event.event_title || 'Event';
+
+        // Free events: only User Mode allowed
+        if (event.event_type === 'free') {
+            const hlCard = document.getElementById('hacklayerCard');
+            hlCard.classList.add('disabled');
+            // Add "Paid Events Only" label
+            const lockLabel = document.createElement('div');
+            lockLabel.style.cssText = 'margin-top:12px;font-size:9px;color:var(--red);letter-spacing:1px;text-transform:uppercase;font-weight:600;';
+            lockLabel.textContent = '🔒 Paid Events Only';
+            hlCard.appendChild(lockLabel);
+        }
+
+        // Fade-in animation
+        const cards = document.querySelector('.mode-cards');
+        const titleEl = document.querySelector('.mode-title');
+        const subEl = document.querySelector('.mode-subtitle');
+        [titleEl, subEl, cards].forEach(el => {
+            if (el) { el.style.opacity = '0'; el.style.transition = 'opacity 0.8s ease, transform 0.8s ease'; el.style.transform = 'translateY(10px)'; }
+        });
+        setTimeout(() => {
+            if (titleEl) { titleEl.style.opacity = '1'; titleEl.style.transform = 'translateY(0)'; }
+        }, 300);
+        setTimeout(() => {
+            if (subEl) { subEl.style.opacity = '1'; subEl.style.transform = 'translateY(0)'; }
+        }, 500);
+        setTimeout(() => {
+            if (cards) { cards.style.opacity = '1'; cards.style.transform = 'translateY(0)'; }
+        }, 700);
+
+        function selectMode(mode) {
+            // Click feedback — flash the card
+            const card = mode === 'hacklayer' ? document.getElementById('hacklayerCard') : document.getElementById('userCard');
+            card.style.borderColor = 'var(--accent)';
+            card.style.boxShadow = '0 0 40px rgba(0,232,123,0.15)';
+
+            sessionStorage.setItem('ctf_mode', mode);
+
+            // Slight delay for visual feedback
+            setTimeout(async () => {
+                if (mode === 'hacklayer') {
+                    // Store session data for sidebar window (separate window can't access sessionStorage)
+                    await window.ctfAPI.storeSessionData({
+                        token: sessionStorage.getItem('ctf_token'),
+                        user: sessionStorage.getItem('ctf_user'),
+                        event: sessionStorage.getItem('ctf_event'),
+                        slot: sessionStorage.getItem('ctf_slot'),
+                        mode: 'hacklayer'
+                    });
+                    window.ctfAPI.navigate('hacklayer-env.html');
+                } else {
+                    window.ctfAPI.navigate('secure-env.html');
+                }
+            }, 300);
+        }
+    </script>
+</body>
+
+</html>

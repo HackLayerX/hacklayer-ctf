@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; media-src blob: mediastream: *; object-src 'none'; base-uri 'none';">
+    <title>HackLayer CTF</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="secure-env">
+        <canvas id="boat-canvas"></canvas>
+
+        <!-- ===== CINEMATIC INTRO OVERLAY ===== -->
+        <div id="introOverlay" style="
+            position:fixed; inset:0; z-index:9999;
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            background:transparent; pointer-events:none; transition: opacity 1.5s ease;
+        ">
+            <div id="introText" style="
+                font-family:'Courier New',monospace; color:rgba(0,255,136,0.7);
+                font-size:14px; letter-spacing:6px; text-transform:uppercase;
+                opacity:0; transition: opacity 2s ease;
+                text-shadow: 0 0 20px rgba(0,255,136,0.3);
+            ">ENTERING SECURE ENVIRONMENT</div>
+            <div id="introSubtext" style="
+                font-family:'Courier New',monospace; color:rgba(100,120,130,0.5);
+                font-size:11px; letter-spacing:3px; margin-top:12px;
+                opacity:0; transition: opacity 2s ease 0.5s;
+            ">ALL ACTIVITY IS MONITORED</div>
+            <div id="introLoader" style="
+                width:120px; height:1px; background:rgba(0,255,136,0.1);
+                margin-top:24px; border-radius:1px; overflow:hidden;
+                opacity:0; transition: opacity 1s ease 1s;
+            ">
+                <div id="introProgress" style="
+                    width:0%; height:100%; background:rgba(0,255,136,0.6);
+                    transition: width 4s ease-in-out;
+                "></div>
+            </div>
+        </div>
+
+        <div class="watermark" id="watermark"></div>
+
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="user-section">
+                <img src="" id="topAvatar" alt="">
+                <span id="topName"></span>
+                <span style="color:var(--text-muted);">/</span>
+                <span id="topId"></span>
+            </div>
+            <div class="event-info">
+                <span id="topEvent" style="color:var(--text-muted);font-size:11px;"></span>
+                <span class="event-timer" id="eventTimer">--:--:--</span>
+                <div class="event-status">
+                    <div class="dot"></div>
+                    <span>LIVE</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard Window -->
+        <div class="float-window leaderboard-window" id="winLeaderboard">
+            <div class="window-header">
+                <h3>Leaderboard</h3>
+                <span class="window-close" onclick="toggleWindow('winLeaderboard')">&#xd7;</span>
+            </div>
+            <div class="window-body" id="leaderboardBody"></div>
+        </div>
+
+        <!-- Flag Submit Window -->
+        <div class="float-window flag-window" id="winFlags">
+            <div class="window-header">
+                <h3>Challenges</h3>
+                <span class="window-close" onclick="toggleWindow('winFlags')">&#xd7;</span>
+            </div>
+            <div class="window-body" id="flagsBody"></div>
+        </div>
+
+        <!-- Logs Window -->
+        <div class="float-window logs-window" id="winLogs">
+            <div class="window-header">
+                <h3>Activity Log</h3>
+                <span class="window-close" onclick="toggleWindow('winLogs')">&#xd7;</span>
+            </div>
+            <div class="window-body" id="logsBody">
+                <div style="color:var(--text-muted);text-align:center;padding:20px;font-size:12px;">Waiting for
+                    activity...</div>
+            </div>
+        </div>
+
+        <!-- Browser Window -->
+        <div class="float-window browser-window" id="winBrowser">
+            <div class="window-header">
+                <h3>Browser</h3>
+                <span class="window-close" onclick="toggleWindow('winBrowser')">&#xd7;</span>
+            </div>
+            <div class="browser-bar">
+                <input type="text" class="browser-url" id="browserUrl" placeholder="Enter URL..."
+                    value="https://www.google.com">
+                <button class="browser-go" onclick="navigateBrowser()">Go</button>
+            </div>
+            <div class="window-body" style="padding:0;height:calc(100% - 82px);">
+                <webview id="browserFrame" src="https://www.google.com" style="width:100%;height:100%;"></webview>
+            </div>
+        </div>
+
+        <!-- Score Window -->
+        <div class="float-window score-window" id="winScore">
+            <div class="window-header">
+                <h3>Progress</h3>
+                <span class="window-close" onclick="toggleWindow('winScore')">&#xd7;</span>
+            </div>
+            <div class="window-body">
+                <div class="score-grid">
+                    <div class="score-item">
+                        <div class="score-value" id="myFlags">0/0</div>
+                        <div class="score-label">Flags</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value" id="myRank">--</div>
+                        <div class="score-label">Rank</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value amber" id="myWarnings">0/3</div>
+                        <div class="score-label">Warnings</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Camera Monitor Window -->
+        <div class="float-window camera-window show" id="winCamera"
+            style="width:240px;height:200px;right:12px;bottom:60px;">
+            <div class="window-header">
+                <h3>📷 Camera Monitor</h3>
+                <span class="window-close" onclick="toggleWindow('winCamera')">&#xd7;</span>
+            </div>
+            <div class="window-body" style="padding:0;position:relative;overflow:hidden;">
+                <video id="cameraFeed" autoplay muted playsinline
+                    style="width:100%;height:100%;object-fit:cover;background:#000;"></video>
+                <div id="cameraStatus"
+                    style="position:absolute;bottom:4px;left:6px;font-size:9px;color:#0f0;letter-spacing:1px;text-shadow:0 0 4px #000;">
+                    ● MONITORING</div>
+                <canvas id="cameraCanvas" style="display:none;"></canvas>
+            </div>
+        </div>
+
+        <!-- Taskbar -->
+        <div class="taskbar">
+            <div class="taskbar-icon" onclick="toggleWindow('winLeaderboard')" id="tbLeaderboard">
+                <div class="tb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M8 21h8m-4-4v4M6 4h12l-1 7a5 5 0 01-10 0L6 4zM4 4h2M18 4h2M9 10h.01M15 10h.01" />
+                    </svg></div>
+                <span class="label">Ranks</span>
+            </div>
+            <div class="taskbar-icon" onclick="toggleWindow('winFlags')" id="tbFlags">
+                <div class="tb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7" />
+                    </svg></div>
+                <span class="label">Flags</span>
+            </div>
+            <div class="taskbar-icon" onclick="toggleWindow('winLogs')" id="tbLogs">
+                <div class="tb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M4 6h16M4 10h16M4 14h10M4 18h6" />
+                    </svg></div>
+                <span class="label">Logs</span>
+            </div>
+            <div class="taskbar-icon" onclick="toggleWindow('winBrowser')" id="tbBrowser">
+                <div class="tb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="10" />
+                        <path
+                            d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z" />
+                    </svg></div>
+                <span class="label">Web</span>
+            </div>
+            <div class="taskbar-icon" onclick="toggleWindow('winScore')" id="tbScore">
+                <div class="tb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M18 20V10M12 20V4M6 20v-6" />
+                    </svg></div>
+                <span class="label">Stats</span>
+            </div>
+            <div class="taskbar-icon" onclick="toggleWindow('winCamera')" id="tbCamera">
+                <div class="tb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M23 7l-7 5 7 5V7z" />
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                    </svg></div>
+                <span class="label">Cam</span>
+            </div>
+            <div class="taskbar-icon" onclick="showUserExit()" id="tbExit" style="margin-left:auto;">
+                <div class="tb-icon" style="color:#ef4444;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.5">
+                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                    </svg></div>
+                <span class="label" style="color:#ef4444;">Exit</span>
+            </div>
+        </div>
+
+        <!-- VISIBLE ERROR LOG BAR (always shown at top) -->
+        <div id="errorLogBar" style="
+            position:fixed; top:36px; left:0; right:0; z-index:8000;
+            max-height:120px; overflow-y:auto;
+            display:none; flex-direction:column; gap:2px;
+            padding:4px 12px;
+            background:rgba(20,0,0,0.92);
+            border-bottom:1px solid rgba(239,68,68,0.3);
+            font-family:'Courier New',monospace; font-size:11px;
+        "></div>
+
+        <!-- Notification -->
+        <div class="fake-notification" id="fakeNotif">
+            <div class="notif-icon" id="notifIcon"></div>
+            <div class="notif-content">
+                <div class="notif-app" id="notifApp">App</div>
+                <div class="notif-msg" id="notifMsg">Message</div>
+                <div class="notif-time" id="notifTime">just now</div>
+            </div>
+        </div>
+
+        <!-- Warning Overlay -->
+        <div class="warning-overlay" id="warningOverlay">
+            <div class="warning-box">
+                <div class="warning-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
+                        <path
+                            d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                </div>
+                <h2>Security Warning</h2>
+                <p>Unauthorized action detected.</p>
+                <div class="warning-count" id="warningCount">1/3</div>
+                <p style="font-size:11px;color:var(--text-muted);margin-top:8px;">Next violation may result in removal.
+                </p>
+                <button class="btn btn-danger"
+                    style="width:auto;padding:10px 32px;display:inline-block;margin-top:14px;"
+                    onclick="dismissWarning()">UNDERSTOOD</button>
+            </div>
+        </div>
+
+        <!-- Kick Overlay -->
+        <div class="kick-overlay" id="kickOverlay">
+            <div class="kick-box">
+                <div class="kick-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M15 9l-6 6M9 9l6 6" />
+                    </svg>
+                </div>
+                <h2>You Have Been Removed</h2>
+                <p style="color:var(--text-secondary);margin:12px 0;">Security violation detected. You have been removed
+                    from this event.</p>
+                <p style="color:var(--text-muted);font-size:11px;margin-bottom:18px;">Your access code is no longer
+                    valid.</p>
+                <button class="btn btn-danger" onclick="exitAfterKick()">EXIT</button>
+            </div>
+        </div>
+
+        <!-- Exit Prompt -->
+        <div class="exit-overlay" id="exitOverlay">
+            <div class="exit-box">
+                <h2
+                    style="color:var(--text);margin-bottom:14px;font-size:14px;letter-spacing:1px;text-transform:uppercase;">
+                    Admin Exit</h2>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="exitPassword" placeholder="Enter admin password">
+                </div>
+                <button class="btn" style="margin-bottom:8px;" onclick="confirmExit()">Exit Secure Environment</button>
+                <button class="btn btn-secondary" onclick="cancelExit()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- User Exit Confirmation -->
+        <div class="exit-overlay" id="userExitOverlay" style="display:none;">
+            <div class="exit-box" style="text-align:center;">
+                <div style="margin-bottom:16px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"
+                        style="width:48px;height:48px;margin:0 auto;">
+                        <path
+                            d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                </div>
+                <h2
+                    style="color:var(--text);margin-bottom:8px;font-size:15px;text-transform:uppercase;letter-spacing:1px;">
+                    Leave Event?</h2>
+                <p style="color:var(--text-muted);font-size:12px;margin-bottom:6px;">Your progress will be saved but you
+                    cannot rejoin this slot.</p>
+                <p style="color:#ef4444;font-size:11px;margin-bottom:18px;">Your access code will be marked as used.</p>
+                <button class="btn btn-danger" style="margin-bottom:8px;" onclick="confirmUserExit()">Yes, Leave
+                    Event</button>
+                <button class="btn btn-secondary" onclick="cancelUserExit()">Stay in Event</button>
+            </div>
+        </div>
+
+        <!-- Result Overlay -->
+        <div class="result-overlay" id="resultOverlay">
+            <div class="result-box">
+                <h1>Event Complete</h1>
+                <div class="result-rank" id="resultRank">#--</div>
+                <div class="result-stats">
+                    <div class="result-stat">
+                        <div class="val" id="resultFlags">0</div>
+                        <div class="lbl">Flags Solved</div>
+                    </div>
+                </div>
+                <div class="result-code" id="resultCode" style="display:none;"></div>
+                <div id="resultLeaderboard" style="margin-top:16px;max-height:240px;overflow-y:auto;"></div>
+                <button class="btn" style="margin-top:14px;" onclick="exitEvent()">Exit</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/boat-animation.js"></script>
+    <script>
+        // ===== CINEMATIC INTRO SEQUENCE =====
+        (function () {
+            // Hide all game UI initially
+            const gameElements = document.querySelectorAll('.top-bar, .float-window, .taskbar');
+            gameElements.forEach(el => { el.style.opacity = '0'; el.style.transition = 'opacity 1s ease'; });
+
+            // Phase 1: Show text (after 1.5s)
+            setTimeout(() => {
+                document.getElementById('introText').style.opacity = '1';
+                document.getElementById('introSubtext').style.opacity = '1';
+                document.getElementById('introLoader').style.opacity = '1';
+            }, 1500);
+
+            // Phase 2: Start progress bar (after 2s)
+            setTimeout(() => {
+                document.getElementById('introProgress').style.width = '100%';
+            }, 2000);
+
+            // Phase 3: Fade out intro, reveal UI (after 6s)
+            setTimeout(() => {
+                const overlay = document.getElementById('introOverlay');
+                overlay.style.opacity = '0';
+
+                // Show game UI
+                gameElements.forEach(el => { el.style.opacity = '1'; });
+
+                // Remove overlay from DOM after transition
+                setTimeout(() => overlay.remove(), 2000);
+            }, 6500);
+        })();
+    </script>
+    <script src="js/secure-env.js"></script>
+</body>
+
+</html>
