@@ -1,12 +1,12 @@
 #!/bin/bash
 # HackLayer CTF - Universal Installer (Mac/Linux)
-# Usage: curl -fsSL https://hacklayer.com/install.sh | bash
-# Or:    wget -qO- https://hacklayer.com/install.sh | bash
+# Usage: curl -4 -fsSL https://hacklayer.com/install.sh | bash
+# Or:    wget -4 -qO- https://hacklayer.com/install.sh | bash
 
 set -e
 
 # === CONFIG ===
-BASE_URL="https://hacklayer.com/wp-content/uploads/ctf-downloads"
+BASE_URL="https://hacklayer.com/downloads"
 
 # Colors
 GREEN='\033[0;32m'
@@ -22,9 +22,9 @@ echo ""
 echo -e "${YELLOW}[*] Checking latest version...${NC}"
 VERSION="1.0.0"
 if command -v curl &> /dev/null; then
-    MANIFEST=$(curl -fsSL "${BASE_URL}/latest.json" 2>/dev/null || echo "")
+    MANIFEST=$(curl -4 -fsSL "${BASE_URL}/latest.json" 2>/dev/null || echo "")
 elif command -v wget &> /dev/null; then
-    MANIFEST=$(wget -qO- "${BASE_URL}/latest.json" 2>/dev/null || echo "")
+    MANIFEST=$(wget -4 -qO- "${BASE_URL}/latest.json" 2>/dev/null || echo "")
 fi
 
 if [ -n "$MANIFEST" ]; then
@@ -41,11 +41,8 @@ ARCH="$(uname -m)"
 
 case "$OS" in
     Darwin)
-        if [ "$ARCH" = "arm64" ]; then
-            FILE="HackLayer-CTF-${VERSION}-arm64.dmg"
-        else
-            FILE="HackLayer-CTF-${VERSION}-x64.dmg"
-        fi
+        # ARM64 build works on Intel via Rosetta 2
+        FILE="HackLayer-CTF-${VERSION}-arm64.dmg"
         echo -e "${GREEN}[+] Detected: macOS ($ARCH)${NC}"
         ;;
     Linux)
@@ -68,9 +65,9 @@ DEST="$HOME/Downloads/${FILE}"
 # === Download ===
 echo -e "${YELLOW}[*] Downloading: ${FILE}${NC}"
 if command -v curl &> /dev/null; then
-    curl -fSL --progress-bar -o "$DEST" "$URL"
+    curl -4 -fSL --progress-bar -o "$DEST" "$URL"
 elif command -v wget &> /dev/null; then
-    wget --show-progress -q -O "$DEST" "$URL"
+    wget -4 --show-progress -q -O "$DEST" "$URL"
 else
     echo "Error: curl or wget required"
     exit 1
