@@ -81,9 +81,29 @@ case "$OS" in
         echo -e "${YELLOW}[*] Removing quarantine flag...${NC}"
         xattr -cr "$DEST" 2>/dev/null || true
         echo -e "${YELLOW}[*] Mounting DMG...${NC}"
-        hdiutil attach "$DEST" -quiet
-        echo ""
-        echo -e "${GREEN}[+] Done! Drag HackLayer CTF to Applications.${NC}"
+        MOUNT_POINT=$(hdiutil attach "$DEST" -nobrowse | grep '/Volumes' | awk '{print $NF}')
+        if [ -z "$MOUNT_POINT" ]; then
+            MOUNT_POINT="/Volumes/HackLayer CTF"
+        fi
+        # Remove Gatekeeper quarantine from the app inside DMG
+        echo -e "${YELLOW}[*] Bypassing Gatekeeper...${NC}"
+        APP_PATH=$(find "$MOUNT_POINT" -name "*.app" -maxdepth 1 2>/dev/null | head -1)
+        if [ -n "$APP_PATH" ]; then
+            cp -R "$APP_PATH" /Applications/
+            xattr -cr "/Applications/$(basename "$APP_PATH")" 2>/dev/null || true
+            # Also remove quarantine via spctl
+            sudo spctl --add "/Applications/$(basename "$APP_PATH")" 2>/dev/null || true
+            hdiutil detach "$MOUNT_POINT" -quiet 2>/dev/null || true
+            echo ""
+            echo -e "${GREEN}[+] Installed to /Applications/$(basename "$APP_PATH")${NC}"
+            echo -e "${GREEN}[+] Launching...${NC}"
+            open "/Applications/$(basename "$APP_PATH")"
+        else
+            echo ""
+            echo -e "${GREEN}[+] Done! Drag HackLayer CTF to Applications.${NC}"
+            echo -e "${YELLOW}[!] If Gatekeeper blocks it, run:${NC}"
+            echo -e "    sudo xattr -cr /Applications/HackLayer\\ CTF.app"
+        fi
         ;;
     Linux)
         chmod +x "$DEST"
