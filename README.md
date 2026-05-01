@@ -75,13 +75,33 @@ Choose your platform below. Each has two options — if one doesn't work, use th
 
 After download, confirm file integrity:
 
-| Platform | Command |
-|----------|---------|
-| Windows | `certutil -hashfile "HackLayer-CTF-Setup-1.0.0.exe" SHA256` |
-| macOS | `shasum -a 256 ~/Downloads/HackLayer-CTF-1.0.0-arm64.dmg` |
-| Linux | `sha256sum HackLayer-CTF-1.0.0.AppImage` |
+### Expected Hashes (v1.0.0)
 
-Compare the output with hashes published on [hacklayer.com](https://hacklayer.com).
+| Platform | File | SHA256 |
+|----------|------|--------|
+| Windows | `HackLayer-CTF-Setup-1.0.0.exe` | `4B331E4357464B4D53B5537C07762F219EC4CD1650B17C8D103350D6D7F104B1` |
+| macOS | `HackLayer-CTF-1.0.0-arm64.dmg` | `385E46FA09B20934C3751772D6AA13F8B595544184322E21391DFA8ED24E3A7C` |
+| Linux | `HackLayer-CTF-1.0.0.AppImage` | `1A64D301D9E4C83FEDD853CFCAAE80AA7456F3CDD2822B12EC972EA17419EF33` |
+
+### How to verify
+
+**Windows (PowerShell):**
+```powershell
+certutil -hashfile "$HOME\Downloads\HackLayer-CTF-Setup-1.0.0.exe" SHA256
+```
+
+**macOS (Terminal):**
+```bash
+shasum -a 256 ~/Downloads/HackLayer-CTF-1.0.0-arm64.dmg
+```
+
+**Linux (Terminal):**
+```bash
+sha256sum ~/Downloads/HackLayer-CTF-1.0.0.AppImage
+```
+
+✅ If hash matches the table above → file is genuine and untampered.  
+❌ If hash doesn't match → delete the file and re-download.
 
 ---
 
