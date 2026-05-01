@@ -5,15 +5,17 @@
 # PowerShell:
 #   irm https://hacklayer.com/install.ps1 | iex
 #
-# CMD:
-#   powershell -ep Bypass -c "irm https://hacklayer.com/install.ps1 | iex"
+# CMD (stays open on error):
+#   powershell -ep Bypass -NoExit -c "irm https://hacklayer.com/install.ps1 | iex"
 #
 
 $ErrorActionPreference = "Stop"
 
 # === CONFIG ===
-$BASE_URL = "https://hacklayer.com/wp-content/uploads/ctf-downloads"
+$BASE_URL = "https://hacklayer.com/downloads"
+$MANIFEST_URL = "https://hacklayer.com/downloads/latest.json"
 $VERSION = "1.0.0"
+$fileName = ""
 
 Write-Host ""
 Write-Host "  ⚡ HackLayer CTF - Installer" -ForegroundColor Cyan
@@ -24,9 +26,13 @@ Write-Host ""
 Write-Host "  [0/3] Checking latest version ..." -ForegroundColor Yellow
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    $manifest = Invoke-RestMethod -Uri "$BASE_URL/latest.json" -UseBasicParsing
+    $manifest = Invoke-RestMethod -Uri "$MANIFEST_URL" -UseBasicParsing
     if ($manifest.version) {
         $VERSION = $manifest.version
+    }
+    # Use exact filename from manifest if available
+    if ($manifest.files.win) {
+        $fileName = $manifest.files.win
     }
     Write-Host "  [+] Latest version: $VERSION" -ForegroundColor Green
 }
@@ -34,15 +40,26 @@ catch {
     Write-Host "  [!] Could not fetch latest version, using fallback v$VERSION" -ForegroundColor Yellow
 }
 
-$fileName = "HackLayer-CTF-Setup-${VERSION}.exe"
+if (-not $fileName) { $fileName = "HackLayer-CTF-Setup-${VERSION}.exe" }
 $downloadUrl = "$BASE_URL/$fileName"
 $downloadPath = Join-Path $env:TEMP $fileName
 
-# Step 1: Download
+# Step 1: Download with progress
 Write-Host "  [1/3] Downloading $fileName ..." -ForegroundColor Yellow
 try {
+    # Get file size first
+    $headResp = Invoke-WebRequest -Uri $downloadUrl -Method Head -UseBasicParsing
+    $clHeader = $headResp.Headers['Content-Length']
+    $totalSize = [long]$(if ($clHeader -is [array]) { $clHeader[0] } else { $clHeader })
+    $totalMB = [math]::Round($totalSize / 1MB, 1)
+    Write-Host "         Size: ${totalMB} MB" -ForegroundColor DarkGray
+
+    # Download with visible progress (PowerShell native progress bar)
+    $ProgressPreference = 'Continue'
     Invoke-WebRequest -Uri $downloadUrl -OutFile $downloadPath -UseBasicParsing
-    Write-Host "  [+] Downloaded to: $downloadPath" -ForegroundColor Green
+    $ProgressPreference = 'SilentlyContinue'
+    
+    Write-Host "  [+] Downloaded: $downloadPath" -ForegroundColor Green
 }
 catch {
     Write-Host "  [!] Download failed: $_" -ForegroundColor Red

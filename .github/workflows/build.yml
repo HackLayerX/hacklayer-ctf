@@ -3,7 +3,7 @@ name: Build HackLayer CTF (Win + Mac + Linux)
 on:
   push:
     branches: [main, master]
-  workflow_dispatch: # Manual trigger button on GitHub
+  workflow_dispatch:
 
 jobs:
   build-windows:
@@ -18,25 +18,37 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: HackLayer-CTF-Windows
-          path: |
-            ../dist/*.exe
+          path: dist/*.exe
           retention-days: 30
 
-  build-mac:
-    runs-on: macos-latest
+  build-mac-arm:
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm ci
-      - run: npx electron-builder --mac
+      - run: npx electron-builder --mac --arm64
       - uses: actions/upload-artifact@v4
         with:
-          name: HackLayer-CTF-Mac
-          path: |
-            ../dist/*.dmg
-            ../dist/*.zip
+          name: HackLayer-CTF-Mac-ARM
+          path: dist/*.dmg
+          retention-days: 30
+
+  build-mac-intel:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npx electron-builder --mac --x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HackLayer-CTF-Mac-Intel
+          path: dist/*.dmg
           retention-days: 30
 
   build-linux:
@@ -47,11 +59,9 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
-      - run: npx electron-builder --linux
+      - run: npx electron-builder --linux AppImage
       - uses: actions/upload-artifact@v4
         with:
           name: HackLayer-CTF-Linux
-          path: |
-            ../dist/*.AppImage
-            ../dist/*.deb
+          path: dist/*.AppImage
           retention-days: 30
