@@ -10,10 +10,7 @@ variables:
 build:windows:
   stage: build
   tags:
-    - shared-windows
-    - windows-1809
-  variables:
-    FF_USE_POWERSHELL_PATH_RESOLVER: "true"
+    - saas-windows-medium-amd64
   before_script:
     - choco install nodejs --version=$NODE_VERSION -y --no-progress
     - refreshenv
@@ -29,9 +26,7 @@ build:windows:
 
 build:linux:
   stage: build
-  image: electronuserland/builder:16
-  tags:
-    - linux
+  image: electronuserland/builder:20
   script:
     - npm ci
     - npm run build:linux
@@ -45,7 +40,7 @@ build:mac:
   tags:
     - saas-macos-medium-m1
   before_script:
-    - brew install node@20
+    - brew install node@20 || true
     - export PATH="/opt/homebrew/opt/node@20/bin:$PATH"
     - node --version
     - npm --version
@@ -63,8 +58,6 @@ build:mac:
 release:
   stage: release
   image: registry.gitlab.com/gitlab-org/release-cli:latest
-  tags:
-    - linux
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
   needs:
