@@ -1,0 +1,5 @@
+{
+    "api_url": "https://your-domain.com/wp-json/ctf/v1",
+    "api_secret": "CHANGE_ME_generate_a_random_64_char_string",
+    "admin_password_hash": "CHANGE_ME_sha256_hash_of_your_admin_password"
+}

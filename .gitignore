@@ -8,3 +8,7 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
+
+# Sensitive config (contains API secrets)
+config.json
+latest.json
