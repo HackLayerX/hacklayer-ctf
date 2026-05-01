@@ -4,103 +4,100 @@
 
 **Secure Capture The Flag Environment**
 
-[![Download](https://img.shields.io/github/v/release/SankiiM/hacklayer-ctf-download?label=Latest&color=00ff88&style=for-the-badge)](https://github.com/SankiiM/hacklayer-ctf-download/releases/latest)
+[![Version](https://img.shields.io/badge/Version-1.0.0-00ff88?style=for-the-badge)](https://hacklayer.com)
+[![Platform](https://img.shields.io/badge/Platform-Win%20%7C%20Mac%20%7C%20Linux-blue?style=for-the-badge)](#installation)
 
 </div>
 
 ---
 
-## 🖥️ Windows
+## Installation
 
-**PowerShell** (recommended):
-
-```powershell
-irm https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.ps1 | iex
-```
-
-**CMD** (alternative):
-
-```cmd
-powershell -ep Bypass -c "irm https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.ps1 | iex"
-```
-
-**Direct download:** [Download .exe](https://github.com/SankiiM/hacklayer-ctf-download/releases/latest)
-
-> ℹ️ SmartScreen popup nahi aayega — installer automatically handle karta hai
+Choose your platform below. Each has two options — if one doesn't work, use the other.
 
 ---
 
-## 🍎 macOS
+### 🖥️ Windows
 
-**Terminal** (curl):
+| # | Method | Command |
+|---|--------|---------|
+| 1 | **Primary** | `irm https://hacklayer.com/install.ps1 \| iex` |
+| 2 | **Alternate** | `irm https://raw.githubusercontent.com/HackLayerX/hacklayer-ctf/main/install.ps1 \| iex` |
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.sh | bash
-```
+**How to run:** Open PowerShell → paste command → press Enter.
 
-**Terminal** (wget):
-
-```bash
-wget -qO- https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.sh | bash
-```
-
-**Direct download:** [Download .dmg](https://github.com/SankiiM/hacklayer-ctf-download/releases/latest)
-
-> ℹ️ If Gatekeeper blocks: Right-click → Open, or `xattr -cr ~/Downloads/HackLayer-CTF-*.dmg`
+> If SmartScreen appears → Click "More info" → "Run anyway"
 
 ---
 
-## 🐧 Linux
+### 🍎 macOS
 
-**Terminal** (curl):
+| # | Method | Command |
+|---|--------|---------|
+| 1 | **Primary** | `curl -4 -fsSL https://hacklayer.com/install.sh \| bash` |
+| 2 | **Alternate** | `curl -fsSL https://raw.githubusercontent.com/HackLayerX/hacklayer-ctf/main/docs/install.sh \| bash` |
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.sh | bash
-```
+**How to run:** Open Terminal → paste command → press Enter → enter password if asked.
 
-**Terminal** (wget):
-
-```bash
-wget -qO- https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.sh | bash
-```
-
-**Direct download:** [Download .AppImage](https://github.com/SankiiM/hacklayer-ctf-download/releases/latest)
-
-> ℹ️ After download: `chmod +x HackLayer-CTF-*.AppImage && ./HackLayer-CTF-*.AppImage`
+> Works on Apple Silicon (M1/M2/M3/M4) and Intel Macs.
 
 ---
 
-## 🔐 Verify File Integrity (SHA256)
+### 🐧 Linux
 
-After downloading, verify the file is genuine and untampered:
+| # | Method | Command |
+|---|--------|---------|
+| 1 | **Primary** | `curl -4 -fsSL https://hacklayer.com/install.sh \| bash` |
+| 2 | **Alternate** | `curl -fsSL https://raw.githubusercontent.com/HackLayerX/hacklayer-ctf/main/docs/install.sh \| bash` |
+
+**How to run:** Open Terminal → paste command → press Enter.
+
+> After install, run with: `./HackLayer-CTF-*.AppImage`
+
+---
+
+## What happens when you run the command?
+
+| Step | Description |
+|------|-------------|
+| 1 | Detects your OS and architecture |
+| 2 | Downloads the correct installer (~80-100 MB) |
+| 3 | Installs the app automatically |
+| 4 | Launches HackLayer CTF |
+
+- No admin rights needed on Windows
+- macOS: automatically handles Gatekeeper
+- Linux: sets executable permission automatically
+
+---
+
+## Verify Download (SHA256)
+
+After download, confirm file integrity:
 
 | Platform | Command |
 |----------|---------|
-| **Windows** | `certutil -hashfile "HackLayer-CTF-Setup.exe" SHA256` |
-| **macOS** | `shasum -a 256 HackLayer-CTF-*.dmg` |
-| **Linux** | `sha256sum HackLayer-CTF-*.AppImage` |
+| Windows | `certutil -hashfile "HackLayer-CTF-Setup-1.0.0.exe" SHA256` |
+| macOS | `shasum -a 256 ~/Downloads/HackLayer-CTF-1.0.0-arm64.dmg` |
+| Linux | `sha256sum HackLayer-CTF-1.0.0.AppImage` |
 
-**Expected hashes** → Check [Latest Release Notes](https://github.com/SankiiM/hacklayer-ctf-download/releases/latest) for SHA256 values.
-
-If the hash matches ✅ = file is safe. If not ❌ = re-download.
+Compare the output with hashes published on [hacklayer.com](https://hacklayer.com).
 
 ---
 
-## 📋 How it works
+## Troubleshooting
 
-| Step | What happens |
-|------|-------------|
-| 1 | Detects latest version from GitHub |
-| 2 | Downloads correct file for your OS |
-| 3 | Removes security blocks (SmartScreen / Gatekeeper) |
-| 4 | Launches installer automatically |
-
-✅ No manual steps needed · ✅ Auto-updates after first install
+| Problem | Solution |
+|---------|----------|
+| "Could not resolve host" on Mac/Linux | Use Option 2 (Alternate) |
+| Windows SmartScreen blocks | Click "More info" → "Run anyway" |
+| macOS Gatekeeper blocks | Run: `sudo xattr -cr /Applications/HackLayer\ CTF.app` |
+| Download stuck/slow | Try at a different time or use alternate option |
 
 ---
 
 <div align="center">
 
-© 2025 [HackLayer](https://hacklayer.com) — All rights reserved
+**[hacklayer.com](https://hacklayer.com)** — © 2026 HackLayer
 
 </div>
