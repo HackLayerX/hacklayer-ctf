@@ -13,6 +13,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Create config
+        run: echo '${{ secrets.APP_CONFIG }}' > config.json
+        shell: bash
       - run: npm ci
       - run: npx electron-builder --win --x64
       - uses: actions/upload-artifact@v4
@@ -28,6 +31,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Create config
+        run: echo '${{ secrets.APP_CONFIG }}' > config.json
       - run: npm ci
       - run: npx electron-builder --mac --arm64
       - uses: actions/upload-artifact@v4
@@ -43,6 +48,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Create config
+        run: echo '${{ secrets.APP_CONFIG }}' > config.json
       - run: npm ci
       - run: npx electron-builder --linux AppImage
       - uses: actions/upload-artifact@v4
