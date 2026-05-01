@@ -101,6 +101,16 @@
                 "to": "config.json"
             }
         ],
-        "publish": null
+        "publish": [
+            {
+                "provider": "github",
+                "owner": "HackLayerX",
+                "repo": "hacklayer-ctf"
+            },
+            {
+                "provider": "generic",
+                "url": "https://hacklayer.com/downloads/updates"
+            }
+        ]
     }
 }
