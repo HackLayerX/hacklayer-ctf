@@ -14,7 +14,9 @@ jobs:
         with:
           node-version: 20
       - name: Create config
-        run: echo '${{ secrets.APP_CONFIG }}' > config.json
+        env:
+          APP_CONFIG: ${{ secrets.APP_CONFIG }}
+        run: node -e "require('fs').writeFileSync('config.json', process.env.APP_CONFIG)"
         shell: bash
       - run: npm ci
       - run: npx electron-builder --win --x64
@@ -32,7 +34,9 @@ jobs:
         with:
           node-version: 20
       - name: Create config
-        run: echo '${{ secrets.APP_CONFIG }}' > config.json
+        env:
+          APP_CONFIG: ${{ secrets.APP_CONFIG }}
+        run: node -e "require('fs').writeFileSync('config.json', process.env.APP_CONFIG)"
       - run: npm ci
       - run: npx electron-builder --mac --arm64
       - uses: actions/upload-artifact@v4
@@ -49,7 +53,9 @@ jobs:
         with:
           node-version: 20
       - name: Create config
-        run: echo '${{ secrets.APP_CONFIG }}' > config.json
+        env:
+          APP_CONFIG: ${{ secrets.APP_CONFIG }}
+        run: node -e "require('fs').writeFileSync('config.json', process.env.APP_CONFIG)"
       - run: npm ci
       - run: npx electron-builder --linux AppImage
       - uses: actions/upload-artifact@v4
