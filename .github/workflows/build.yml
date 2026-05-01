@@ -25,7 +25,7 @@ jobs:
           path: dist/*.exe
           retention-days: 30
 
-  build-mac-arm:
+  build-mac:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
@@ -33,25 +33,10 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
-      - run: npx electron-builder --mac --arm64
+      - run: npx electron-builder --mac --arm64 --x64
       - uses: actions/upload-artifact@v4
         with:
-          name: HackLayer-CTF-Mac-ARM
-          path: dist/*.dmg
-          retention-days: 30
-
-  build-mac-intel:
-    runs-on: macos-13
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm ci
-      - run: npx electron-builder --mac --x64
-      - uses: actions/upload-artifact@v4
-        with:
-          name: HackLayer-CTF-Mac-Intel
+          name: HackLayer-CTF-Mac
           path: dist/*.dmg
           retention-days: 30
 
