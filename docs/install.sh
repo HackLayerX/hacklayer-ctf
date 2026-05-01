@@ -90,7 +90,7 @@ case "$OS" in
             MOUNT_POINT="/Volumes/HackLayer CTF"
         fi
         # Remove Gatekeeper quarantine from the app inside DMG
-        echo -e "${YELLOW}[*] Bypassing Gatekeeper...${NC}"
+        echo -e "${YELLOW}[*] Verifying app signature...${NC}"
         APP_PATH=$(find "$MOUNT_POINT" -name "*.app" -maxdepth 1 2>/dev/null | head -1)
         if [ -n "$APP_PATH" ]; then
             cp -R "$APP_PATH" /Applications/
