@@ -81,10 +81,13 @@ case "$OS" in
         echo -e "${YELLOW}[*] Removing quarantine flag...${NC}"
         xattr -cr "$DEST" 2>/dev/null || true
         echo -e "${YELLOW}[*] Mounting DMG...${NC}"
-        MOUNT_POINT=$(hdiutil attach "$DEST" -nobrowse 2>/dev/null | grep '/Volumes/' | sed 's/.*\/Volumes/\/Volumes/')
+        # Detach if already mounted from previous run
+        hdiutil detach "/Volumes/HackLayer CTF" -quiet 2>/dev/null || true
+        # Mount DMG (yes handles license agreement, /dev/null prevents stdin hang in pipe)
+        MOUNT_OUTPUT=$(yes | hdiutil attach "$DEST" -nobrowse -noverify 2>/dev/null)
+        MOUNT_POINT=$(echo "$MOUNT_OUTPUT" | grep '/Volumes/' | sed 's/.*\/Volumes/\/Volumes/')
         if [ -z "$MOUNT_POINT" ]; then
             MOUNT_POINT="/Volumes/HackLayer CTF"
-            hdiutil attach "$DEST" -nobrowse -quiet 2>/dev/null
         fi
         # Remove Gatekeeper quarantine from the app inside DMG
         echo -e "${YELLOW}[*] Bypassing Gatekeeper...${NC}"
