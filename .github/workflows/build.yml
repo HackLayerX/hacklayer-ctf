@@ -1,0 +1,57 @@
+name: Build HackLayer CTF (Win + Mac + Linux)
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch: # Manual trigger button on GitHub
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npx electron-builder --win --x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HackLayer-CTF-Windows
+          path: |
+            ../dist/*.exe
+          retention-days: 30
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npx electron-builder --mac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HackLayer-CTF-Mac
+          path: |
+            ../dist/*.dmg
+            ../dist/*.zip
+          retention-days: 30
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npx electron-builder --linux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HackLayer-CTF-Linux
+          path: |
+            ../dist/*.AppImage
+            ../dist/*.deb
+          retention-days: 30

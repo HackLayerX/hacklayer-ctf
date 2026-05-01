@@ -1,32 +1,33 @@
 # HackLayer CTF - One-Command Installer (Windows)
-# Downloads latest release from GitLab, unblocks (bypasses SmartScreen), and runs the installer.
+# Downloads from hacklayer.com, unblocks (bypasses SmartScreen), and runs the installer.
 #
 # === USAGE (give this one-liner to users) ===
 # PowerShell:
-#   irm https://gitlab.com/hacklayer-group/HackLayer-project/-/raw/main/install.ps1 | iex
+#   irm https://hacklayer.com/install.ps1 | iex
 #
 # CMD:
-#   powershell -ep Bypass -c "irm https://gitlab.com/hacklayer-group/HackLayer-project/-/raw/main/install.ps1 | iex"
+#   powershell -ep Bypass -c "irm https://hacklayer.com/install.ps1 | iex"
 #
 
 $ErrorActionPreference = "Stop"
 
 # === CONFIG ===
-$GITLAB_PROJECT = "hacklayer-group/HackLayer-project"
-$GITLAB_API = "https://gitlab.com/api/v4/projects/hacklayer-group%2FHackLayer-project"
+$BASE_URL = "https://hacklayer.com/wp-content/uploads/ctf-downloads"
+$VERSION = "1.0.0"
 
 Write-Host ""
 Write-Host "  ⚡ HackLayer CTF - Installer" -ForegroundColor Cyan
 Write-Host "  =============================" -ForegroundColor DarkGray
 Write-Host ""
 
-# Auto-detect latest version from GitLab Releases API
+# Auto-detect latest version from server
 Write-Host "  [0/3] Checking latest version ..." -ForegroundColor Yellow
-$VERSION = "1.0.0"
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    $release = Invoke-RestMethod -Uri "$GITLAB_API/releases/permalink/latest" -UseBasicParsing
-    $VERSION = $release.tag_name -replace '^v', ''
+    $manifest = Invoke-RestMethod -Uri "$BASE_URL/latest.json" -UseBasicParsing
+    if ($manifest.version) {
+        $VERSION = $manifest.version
+    }
     Write-Host "  [+] Latest version: $VERSION" -ForegroundColor Green
 }
 catch {
@@ -34,8 +35,7 @@ catch {
 }
 
 $fileName = "HackLayer-CTF-Setup-${VERSION}.exe"
-# GitLab generic package registry URL for downloads
-$downloadUrl = "https://gitlab.com/$GITLAB_PROJECT/-/releases/v${VERSION}/downloads/$fileName"
+$downloadUrl = "$BASE_URL/$fileName"
 $downloadPath = Join-Path $env:TEMP $fileName
 
 # Step 1: Download

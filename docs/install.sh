@@ -1,14 +1,12 @@
 #!/bin/bash
 # HackLayer CTF - Universal Installer (Mac/Linux)
-# Usage: curl -fsSL https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.sh | bash
-# Or:    wget -qO- https://raw.githubusercontent.com/SankiiM/hacklayer-ctf-download/main/install.sh | bash
+# Usage: curl -fsSL https://hacklayer.com/install.sh | bash
+# Or:    wget -qO- https://hacklayer.com/install.sh | bash
 
 set -e
 
 # === CONFIG ===
-# Public releases repo (main code repo is private)
-GITHUB_USER="SankiiM"
-GITHUB_REPO="hacklayer-ctf-download"
+BASE_URL="https://hacklayer.com/wp-content/uploads/ctf-downloads"
 
 # Colors
 GREEN='\033[0;32m'
@@ -20,21 +18,20 @@ echo ""
 echo -e "${CYAN}⚡ HackLayer CTF Installer${NC}"
 echo ""
 
-# === Auto-detect latest version (rate-limit safe — uses redirect, not API) ===
+# === Auto-detect latest version from server ===
 echo -e "${YELLOW}[*] Checking latest version...${NC}"
-VERSION=""
+VERSION="1.0.0"
 if command -v curl &> /dev/null; then
-    # Use redirect URL trick — no API rate limit
-    REDIRECT_URL=$(curl -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases/latest" 2>/dev/null)
-    VERSION=$(echo "$REDIRECT_URL" | grep -oE '[^/]+$' | sed 's/^v//')
+    MANIFEST=$(curl -fsSL "${BASE_URL}/latest.json" 2>/dev/null || echo "")
 elif command -v wget &> /dev/null; then
-    REDIRECT_URL=$(wget --max-redirect=0 -q -O /dev/null "https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases/latest" 2>&1 | grep -i 'Location' | awk '{print $2}')
-    VERSION=$(echo "$REDIRECT_URL" | grep -oE '[^/]+$' | sed 's/^v//')
+    MANIFEST=$(wget -qO- "${BASE_URL}/latest.json" 2>/dev/null || echo "")
 fi
 
-if [ -z "$VERSION" ]; then
-    echo -e "${YELLOW}[!] Could not detect latest version, using fallback${NC}"
-    VERSION="1.0.0"
+if [ -n "$MANIFEST" ]; then
+    DETECTED=$(echo "$MANIFEST" | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | grep -o '"[^"]*"$' | tr -d '"')
+    if [ -n "$DETECTED" ]; then
+        VERSION="$DETECTED"
+    fi
 fi
 echo -e "${GREEN}[+] Latest version: ${VERSION}${NC}"
 
@@ -65,7 +62,7 @@ case "$OS" in
         ;;
 esac
 
-URL="https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases/download/v${VERSION}/${FILE}"
+URL="${BASE_URL}/${FILE}"
 DEST="$HOME/Downloads/${FILE}"
 
 # === Download ===
