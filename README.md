@@ -2,6 +2,14 @@
 
 Kiosk-mode CTF platform. One command to install, works offline.
 
+## Download
+
+| Platform | Link |
+|----------|------|
+| Windows (Setup) | [HackLayer-CTF-Setup-1.1.0.exe](https://github.com/HackLayerX/hacklayer-ctf/releases/download/v1.1.0/HackLayer-CTF-Setup-1.1.0.exe) |
+| Windows (Portable) | [HackLayer CTF 1.1.0.exe](https://github.com/HackLayerX/hacklayer-ctf/releases/download/v1.1.0/HackLayer.CTF.1.1.0.exe) |
+| All Releases | [GitHub Releases](https://github.com/HackLayerX/hacklayer-ctf/releases) |
+
 ## Install
 
 ### Windows
@@ -60,20 +68,18 @@ curl -fsSL https://raw.githubusercontent.com/HackLayerX/hacklayer-ctf/main/docs/
 
 ---
 
-## SHA256 Checksums (v1.0.0)
+## SHA256 Checksums (v1.1.0)
 
 Verify your download is legit:
 
 ```
-4B331E4357464B4D53B5537C07762F219EC4CD1650B17C8D103350D6D7F104B1  HackLayer-CTF-Setup-1.0.0.exe
-385E46FA09B20934C3751772D6AA13F8B595544184322E21391DFA8ED24E3A7C  HackLayer-CTF-1.0.0-arm64.dmg
-1A64D301D9E4C83FEDD853CFCAAE80AA7456F3CDD2822B12EC972EA17419EF33  HackLayer-CTF-1.0.0.AppImage
+9D926AAEC5FE46F2EDA5FF310135856737C221360D419DCDB68805D3F4934706  HackLayer-CTF-Setup-1.1.0.exe
+D93D787A62986BE64975BF51A9FE453918C7923681FA2B0D74BD575F94C65BCD  HackLayer-CTF-1.1.0-portable.exe
 ```
 
 Check with:
-- Windows: `certutil -hashfile "HackLayer-CTF-Setup-1.0.0.exe" SHA256`
-- Mac: `shasum -a 256 ~/Downloads/HackLayer-CTF-1.0.0-arm64.dmg`
-- Linux: `sha256sum HackLayer-CTF-1.0.0.AppImage`
+
+- Windows: `certutil -hashfile "HackLayer-CTF-Setup-1.1.0.exe" SHA256`
 
 ---
 

@@ -13,8 +13,10 @@ $ErrorActionPreference = "Stop"
 
 # === CONFIG ===
 $BASE_URL = "https://hacklayer.com/downloads"
+$GH_RELEASE_URL = "https://github.com/HackLayerX/hacklayer-ctf/releases/download"
 $MANIFEST_URL = "https://hacklayer.com/downloads/latest.json"
-$VERSION = "1.0.0"
+$GH_MANIFEST_URL = "https://api.github.com/repos/HackLayerX/hacklayer-ctf/releases/latest"
+$VERSION = "1.1.0"
 $fileName = ""
 
 Write-Host ""
@@ -30,39 +32,51 @@ try {
     if ($manifest.version) {
         $VERSION = $manifest.version
     }
-    # Use exact filename from manifest if available
     if ($manifest.files.win) {
         $fileName = $manifest.files.win
     }
-    Write-Host "  [+] Latest version: $VERSION" -ForegroundColor Green
+    Write-Host "  [+] Latest version: $VERSION (hacklayer.com)" -ForegroundColor Green
 }
 catch {
-    Write-Host "  [!] Could not fetch latest version, using fallback v$VERSION" -ForegroundColor Yellow
+    # Fallback: check GitHub Releases
+    try {
+        $ghRelease = Invoke-RestMethod -Uri "$GH_MANIFEST_URL" -UseBasicParsing
+        $VERSION = $ghRelease.tag_name -replace '^v', ''
+        $fileName = "HackLayer-CTF-Setup-${VERSION}.exe"
+        Write-Host "  [+] Latest version: $VERSION (GitHub)" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "  [!] Could not fetch latest version, using fallback v$VERSION" -ForegroundColor Yellow
+    }
 }
 
 if (-not $fileName) { $fileName = "HackLayer-CTF-Setup-${VERSION}.exe" }
-$downloadUrl = "$BASE_URL/$fileName"
 $downloadPath = Join-Path $env:TEMP $fileName
 
-# Step 1: Download with progress
+# Step 1: Download (try hacklayer.com first, then GitHub Releases)
 Write-Host "  [1/3] Downloading $fileName ..." -ForegroundColor Yellow
-try {
-    # Get file size first
-    $headResp = Invoke-WebRequest -Uri $downloadUrl -Method Head -UseBasicParsing
-    $clHeader = $headResp.Headers['Content-Length']
-    $totalSize = [long]$(if ($clHeader -is [array]) { $clHeader[0] } else { $clHeader })
-    $totalMB = [math]::Round($totalSize / 1MB, 1)
-    Write-Host "         Size: ${totalMB} MB" -ForegroundColor DarkGray
-
-    # Download with visible progress (PowerShell native progress bar)
-    $ProgressPreference = 'Continue'
-    Invoke-WebRequest -Uri $downloadUrl -OutFile $downloadPath -UseBasicParsing
-    $ProgressPreference = 'SilentlyContinue'
-    
-    Write-Host "  [+] Downloaded: $downloadPath" -ForegroundColor Green
+$downloaded = $false
+$urls = @("$BASE_URL/$fileName", "$GH_RELEASE_URL/v${VERSION}/$fileName")
+foreach ($url in $urls) {
+    try {
+        $headResp = Invoke-WebRequest -Uri $url -Method Head -UseBasicParsing -TimeoutSec 10
+        $clHeader = $headResp.Headers['Content-Length']
+        $totalSize = [long]$(if ($clHeader -is [array]) { $clHeader[0] } else { $clHeader })
+        $totalMB = [math]::Round($totalSize / 1MB, 1)
+        Write-Host "         Size: ${totalMB} MB" -ForegroundColor DarkGray
+        $ProgressPreference = 'Continue'
+        Invoke-WebRequest -Uri $url -OutFile $downloadPath -UseBasicParsing
+        $ProgressPreference = 'SilentlyContinue'
+        $downloaded = $true
+        Write-Host "  [+] Downloaded: $downloadPath" -ForegroundColor Green
+        break
+    }
+    catch {
+        continue
+    }
 }
-catch {
-    Write-Host "  [!] Download failed: $_" -ForegroundColor Red
+if (-not $downloaded) {
+    Write-Host "  [!] Download failed from all sources." -ForegroundColor Red
     exit 1
 }
 
