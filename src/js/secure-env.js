@@ -7,6 +7,46 @@ document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('selectstart', e => e.preventDefault());
 document.addEventListener('dragstart', e => e.preventDefault());
 
+// ===== Draggable Float Windows =====
+(function initDraggableWindows() {
+    let dragWin = null, offsetX = 0, offsetY = 0;
+    let topZ = 51;
+
+    // Bring window to front on any click
+    document.addEventListener('pointerdown', e => {
+        const win = e.target.closest('.float-window');
+        if (win) win.style.zIndex = ++topZ;
+
+        const header = e.target.closest('.float-window .window-header');
+        if (!header || e.target.closest('.window-close')) return;
+        dragWin = header.closest('.float-window');
+        const rect = dragWin.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+        dragWin.setPointerCapture(e.pointerId);
+        e.preventDefault();
+    });
+
+    document.addEventListener('pointermove', e => {
+        if (!dragWin) return;
+        let x = e.clientX - offsetX;
+        let y = e.clientY - offsetY;
+        // Keep within viewport
+        const maxX = window.innerWidth - dragWin.offsetWidth;
+        const maxY = window.innerHeight - dragWin.offsetHeight;
+        x = Math.max(0, Math.min(x, maxX));
+        y = Math.max(0, Math.min(y, maxY));
+        dragWin.style.left = x + 'px';
+        dragWin.style.top = y + 'px';
+        dragWin.style.right = 'auto';
+        dragWin.style.bottom = 'auto';
+    });
+
+    document.addEventListener('pointerup', () => {
+        dragWin = null;
+    });
+})();
+
 // ===== Session Data =====
 const token = sessionStorage.getItem('ctf_token');
 const user = JSON.parse(sessionStorage.getItem('ctf_user') || '{}');

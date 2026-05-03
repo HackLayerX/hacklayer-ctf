@@ -961,7 +961,7 @@ body {
 .flag-window {
     width: 460px;
     top: 65px;
-    left: calc(50% - 230px);
+    left: calc(50% - 330px);
 }
 
 .flag-step {
@@ -1274,8 +1274,8 @@ body {
 /* Score */
 .score-window {
     width: 300px;
-    top: 85px;
-    right: 70px;
+    bottom: 70px;
+    left: 36px;
 }
 
 .score-grid {
