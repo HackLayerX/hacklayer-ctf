@@ -29,8 +29,9 @@
 
             <div class="form-group">
                 <label>Category</label>
-                <select id="categorySelect">
-                    <option value="">Loading categories...</option>
+                <div class="skeleton skeleton-line" id="catSkeleton" style="height:40px;"></div>
+                <select id="categorySelect" style="display:none;">
+                    <option value="">-- Select Category --</option>
                 </select>
             </div>
 
@@ -91,7 +92,14 @@
         </div>
     </div>
 
+    <div class="offline-bar" id="offlineBar">No Internet Connection</div>
+
     <script>
+        // Offline indicator
+        window.addEventListener('offline', () => document.getElementById('offlineBar').classList.add('show'));
+        window.addEventListener('online', () => document.getElementById('offlineBar').classList.remove('show'));
+        if (!navigator.onLine) document.getElementById('offlineBar').classList.add('show');
+
         document.addEventListener('contextmenu', e => e.preventDefault());
 
         const token = sessionStorage.getItem('ctf_token');
@@ -110,20 +118,30 @@
 
         // Load events and populate category dropdown
         (async () => {
-            const res = await window.ctfAPI.request('/events', 'GET', null, token);
+            try {
+                const res = await window.ctfAPI.request('/events', 'GET', null, token);
 
-            const catSelect = document.getElementById('categorySelect');
-            catSelect.innerHTML = '<option value="">-- Select Category --</option>';
-            if (res.status === 200 && res.data.events) {
-                allEvents = res.data.events;
-                // Extract unique categories
-                const categories = [...new Set(allEvents.map(ev => ev.category))];
-                categories.forEach(cat => {
-                    const opt = document.createElement('option');
-                    opt.value = cat;
-                    opt.textContent = cat;
-                    catSelect.appendChild(opt);
-                });
+                const catSelect = document.getElementById('categorySelect');
+                const skeleton = document.getElementById('catSkeleton');
+                catSelect.innerHTML = '<option value="">-- Select Category --</option>';
+                if (res.status === 200 && res.data.events) {
+                    allEvents = res.data.events;
+                    const categories = [...new Set(allEvents.map(ev => ev.category))];
+                    categories.forEach(cat => {
+                        const opt = document.createElement('option');
+                        opt.value = cat;
+                        opt.textContent = cat;
+                        catSelect.appendChild(opt);
+                    });
+                }
+                skeleton.style.display = 'none';
+                catSelect.style.display = 'block';
+            } catch (err) {
+                document.getElementById('catSkeleton').style.display = 'none';
+                document.getElementById('categorySelect').style.display = 'block';
+                const errorEl = document.getElementById('errorMsg');
+                errorEl.innerHTML = 'Failed to load events. <button class="retry-btn" onclick="location.reload()">Retry</button>';
+                errorEl.classList.add('show');
             }
         })();
 
@@ -228,7 +246,7 @@
                     errorEl.classList.add('show');
                 }
             } catch (err) {
-                errorEl.textContent = 'Connection error.';
+                errorEl.innerHTML = 'Connection error. <button class="retry-btn" onclick="joinFree()">Retry</button>';
                 errorEl.classList.add('show');
             }
 
@@ -278,7 +296,7 @@
                     errorEl.classList.add('show');
                 }
             } catch (err) {
-                errorEl.textContent = 'Connection error.';
+                errorEl.innerHTML = 'Connection error. <button class="retry-btn" onclick="submitCode()">Retry</button>';
                 errorEl.classList.add('show');
             }
 
@@ -427,7 +445,7 @@
                     document.querySelectorAll('#slotList .btn').forEach(b => b.disabled = false);
                 }
             } catch (err) {
-                errorEl.textContent = 'Connection error.';
+                errorEl.innerHTML = 'Connection error. <button class="retry-btn" onclick="location.reload()">Retry</button>';
                 errorEl.classList.add('show');
                 document.querySelectorAll('#slotList .btn').forEach(b => b.disabled = false);
             }

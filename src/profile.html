@@ -340,12 +340,19 @@
         </div>
     </div>
 
+    <div class="offline-bar" id="offlineBar">No Internet Connection</div>
+
     <div class="update-toast" id="updateToast">
         <span>v<span id="updateVer"></span> available</span>
         <button onclick="window.ctfAPI.installUpdate()">Update</button>
     </div>
 
     <script>
+        // Offline indicator
+        window.addEventListener('offline', () => document.getElementById('offlineBar').classList.add('show'));
+        window.addEventListener('online', () => document.getElementById('offlineBar').classList.remove('show'));
+        if (!navigator.onLine) document.getElementById('offlineBar').classList.add('show');
+
         const token = sessionStorage.getItem('ctf_token');
         const user = JSON.parse(sessionStorage.getItem('ctf_user') || '{}');
         let refreshTimer;
@@ -355,28 +362,34 @@
             document.getElementById('updateToast').classList.add('show');
         });
 
+        // Helper: only update DOM if value changed (prevents flicker)
+        function setIfChanged(id, value) {
+            const el = document.getElementById(id);
+            if (el && el.textContent !== String(value)) el.textContent = value;
+        }
+
         async function load() {
             if (!token) { window.ctfAPI.navigate('login.html'); return; }
 
             // Instant user info
             const name = user.display_name || user.username || '?';
-            document.getElementById('name').textContent = name;
-            document.getElementById('email').textContent = user.email || '';
-            document.getElementById('avatar').textContent = name[0].toUpperCase();
+            setIfChanged('name', name);
+            setIfChanged('email', user.email || '');
+            setIfChanged('avatar', name[0].toUpperCase());
 
             try {
                 // Stats
                 const p = await window.ctfAPI.request('/profile', 'GET', null, token);
                 if (p.status === 200 && p.data) {
                     const d = p.data;
-                    document.getElementById('score').textContent = d.total_score || 0;
-                    document.getElementById('flags').textContent = d.total_flags || 0;
-                    document.getElementById('games').textContent = d.total_games || 0;
-                    document.getElementById('wins').textContent = d.total_wins || 0;
-                    document.getElementById('streak').textContent = d.best_streak || 0;
-                    document.getElementById('rank').textContent = d.rank ? '#' + d.rank : '#-';
+                    setIfChanged('score', d.total_score || 0);
+                    setIfChanged('flags', d.total_flags || 0);
+                    setIfChanged('games', d.total_games || 0);
+                    setIfChanged('wins', d.total_wins || 0);
+                    setIfChanged('streak', d.best_streak || 0);
+                    setIfChanged('rank', d.rank ? '#' + d.rank : '#-');
                     const rate = d.total_games > 0 ? Math.round((d.total_wins / d.total_games) * 100) : 0;
-                    document.getElementById('rate').textContent = rate + '%';
+                    setIfChanged('rate', rate + '%');
                 }
             } catch (e) { /* silent */ }
 

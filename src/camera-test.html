@@ -290,10 +290,25 @@
         <button class="test-btn btn-continue" id="continueBtn" onclick="continueToGame()" disabled
             style="display:none;">Continue to Event</button>
         <button class="test-btn btn-retry" id="retryBtn" onclick="retryTest()" style="display:none;">Retry Test</button>
+        <div id="skipLink" style="display:none;text-align:center;margin-top:12px;">
+            <span style="font-size:10px;color:#555;cursor:pointer;border-bottom:1px dashed #444;"
+                onclick="skipTest()">Skip device test &rarr;</span>
+        </div>
     </div>
 
     <script>
         document.addEventListener('contextmenu', e => e.preventDefault());
+
+        // Show skip option after 5 seconds
+        setTimeout(() => {
+            document.getElementById('skipLink').style.display = 'block';
+        }, 5000);
+
+        function skipTest() {
+            if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); }
+            if (micAnimFrame) cancelAnimationFrame(micAnimFrame);
+            window.ctfAPI.navigate('secure-env.html');
+        }
 
         let mediaStream = null;
         let micAnalyser = null;

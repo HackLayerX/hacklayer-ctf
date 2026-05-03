@@ -172,6 +172,7 @@
 </head>
 
 <body>
+    <div class="offline-bar" id="offlineBar">No Internet Connection</div>
     <div class="mode-container">
         <canvas id="boat-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;"></canvas>
 
@@ -223,6 +224,11 @@
 
     <script src="js/boat-animation.js"></script>
     <script>
+        // Offline indicator
+        window.addEventListener('offline', () => document.getElementById('offlineBar').classList.add('show'));
+        window.addEventListener('online', () => document.getElementById('offlineBar').classList.remove('show'));
+        if (!navigator.onLine) document.getElementById('offlineBar').classList.add('show');
+
         document.addEventListener('contextmenu', e => e.preventDefault());
 
         const event = JSON.parse(sessionStorage.getItem('ctf_event') || '{}');
@@ -232,10 +238,22 @@
         if (event.event_type === 'free') {
             const hlCard = document.getElementById('hacklayerCard');
             hlCard.classList.add('disabled');
-            // Add "Paid Events Only" label
+            hlCard.style.position = 'relative';
+            // Add tooltip
+            const tip = document.createElement('div');
+            tip.className = 'tooltip-text';
+            tip.textContent = 'Available for Paid Events only';
+            tip.style.cssText = 'visibility:visible;opacity:0;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#131319;border:1px solid #1c1c28;color:#6b6b80;font-size:10px;padding:6px 10px;border-radius:5px;white-space:nowrap;pointer-events:none;transition:opacity 0.2s;';
+            hlCard.appendChild(tip);
+            hlCard.style.pointerEvents = 'auto';
+            hlCard.style.cursor = 'not-allowed';
+            hlCard.onmouseenter = () => { tip.style.opacity = '1'; };
+            hlCard.onmouseleave = () => { tip.style.opacity = '0'; };
+            hlCard.onclick = null;
+            // Add lock label
             const lockLabel = document.createElement('div');
             lockLabel.style.cssText = 'margin-top:12px;font-size:9px;color:var(--red);letter-spacing:1px;text-transform:uppercase;font-weight:600;';
-            lockLabel.textContent = '🔒 Paid Events Only';
+            lockLabel.textContent = '\uD83D\uDD12 Paid Events Only';
             hlCard.appendChild(lockLabel);
         }
 

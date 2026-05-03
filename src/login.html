@@ -35,11 +35,28 @@
 
             <button class="btn" id="loginBtn" onclick="doLogin()">Access System</button>
             <button class="btn btn-secondary" style="margin-top:8px;" onclick="window.ctfAPI.exitApp()">Exit</button>
-            <div class="version">v1.0</div>
+            <div style="text-align:center;margin-top:12px;font-size:10px;color:var(--text-muted);">Forgot credentials?
+                Contact your admin.</div>
+            <div class="version" id="appVersion">v1.0.0</div>
         </div>
     </div>
 
+    <div class="offline-bar" id="offlineBar">No Internet Connection</div>
+
     <script>
+        // Offline indicator
+        window.addEventListener('offline', () => document.getElementById('offlineBar').classList.add('show'));
+        window.addEventListener('online', () => document.getElementById('offlineBar').classList.remove('show'));
+        if (!navigator.onLine) document.getElementById('offlineBar').classList.add('show');
+
+        // Dynamic version
+        (async () => {
+            try {
+                const cfg = await window.ctfAPI.getConfig();
+                document.getElementById('appVersion').textContent = 'v' + (cfg.version || '1.0.0');
+            } catch (e) { }
+        })();
+
         // Block right click & shortcuts
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('keydown', e => {
@@ -103,7 +120,7 @@
                     errorEl.classList.add('show');
                 }
             } catch (err) {
-                errorEl.textContent = 'Connection error. Check your internet.';
+                errorEl.innerHTML = 'Connection error. Check your internet. <button class="retry-btn" onclick="doLogin()">Retry</button>';
                 errorEl.classList.add('show');
             }
 
