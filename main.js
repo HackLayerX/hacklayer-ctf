@@ -622,7 +622,7 @@ function startSecurityMonitor() {
         }
     }, 15000);
 
-    // Heartbeat to server every 30s (ALWAYS runs — not kiosk-only)
+    // Heartbeat to server every 60s (ALWAYS runs — not kiosk-only)
     let heartbeatFailCount = 0;
     let lastTokenRefresh = Date.now();
     heartbeatInterval = setInterval(async () => {
@@ -690,12 +690,12 @@ function startSecurityMonitor() {
             }
         } catch (e) {
             heartbeatFailCount++;
-            // After 3 consecutive failures (90s), notify renderer
+            // After 3 consecutive failures (180s), notify renderer
             if (heartbeatFailCount >= 3 && mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send('heartbeat-failed', heartbeatFailCount);
             }
         }
-    }, 30000);
+    }, 60000);
 
     // Monitor display changes (store handler for cleanup)
     displayAddedHandler = () => {

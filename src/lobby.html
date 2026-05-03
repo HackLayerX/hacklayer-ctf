@@ -202,11 +202,11 @@
             scheduleBot();
         })();
 
-        // Refresh real players every 15s
+        // Refresh real players every 30s
         setInterval(async () => {
             await fetchStatus();
             renderPlayers();
-        }, 15000);
+        }, 30000);
 
         function leaveLobby() {
             if (timerInterval) clearInterval(timerInterval);

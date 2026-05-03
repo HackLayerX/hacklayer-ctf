@@ -313,9 +313,9 @@
 
             await loadSlots();
 
-            // Auto-refresh slots every 30 seconds
+            // Auto-refresh slots every 45 seconds
             if (slotRefreshInterval) clearInterval(slotRefreshInterval);
-            slotRefreshInterval = setInterval(() => loadSlots(), 30000);
+            slotRefreshInterval = setInterval(() => loadSlots(), 45000);
         }
 
         async function loadSlots() {
