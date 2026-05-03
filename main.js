@@ -34,7 +34,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const { execSync, exec } = require('child_process');
 const os = require('os');
-const fetch = require('node-fetch');
+const fetch = globalThis.fetch; // Use built-in fetch (Electron 28+)
 const { autoUpdater } = require('electron-updater');
 
 // Enable FaceDetector API for real face detection
