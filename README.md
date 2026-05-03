@@ -4,13 +4,13 @@ Kiosk-mode CTF platform. One command to install, works offline.
 
 ## Download
 
-| Platform | Link |
-|----------|------|
-| Windows (Setup) | [HackLayer-CTF-Setup-1.1.0.exe](https://github.com/HackLayerX/hacklayer-ctf/releases/download/v1.1.0/HackLayer-CTF-Setup-1.1.0.exe) |
-| Windows (Portable) | [HackLayer CTF 1.1.0.exe](https://github.com/HackLayerX/hacklayer-ctf/releases/download/v1.1.0/HackLayer.CTF.1.1.0.exe) |
-| macOS (Apple Silicon) | [HackLayer-CTF-1.1.0-arm64.dmg](https://github.com/HackLayerX/hacklayer-ctf/releases/download/v1.1.0/HackLayer-CTF-1.1.0-arm64.dmg) |
-| Linux (AppImage) | [HackLayer-CTF-1.1.0.AppImage](https://github.com/HackLayerX/hacklayer-ctf/releases/download/v1.1.0/HackLayer-CTF-1.1.0.AppImage) |
-| All Releases | [GitHub Releases](https://github.com/HackLayerX/hacklayer-ctf/releases) |
+| Platform | Link | |
+|----------|------|---|
+| Windows (Setup) | [HackLayer-CTF-Setup-1.1.0.exe](https://github.com/HackLayerX/hacklayer-ctf/releases/download/v1.1.0/HackLayer-CTF-Setup-1.1.0.exe) | ⭐ Recommended |
+| Windows (Portable) | [HackLayer CTF 1.1.0.exe](https://github.com/HackLayerX/hacklayer-ctf/releases/download/v1.1.0/HackLayer.CTF.1.1.0.exe) | ⭐ Recommended |
+| macOS (Apple Silicon) | [HackLayer-CTF-1.1.0-arm64.dmg](https://github.com/HackLayerX/hacklayer-ctf/releases/download/v1.1.0/HackLayer-CTF-1.1.0-arm64.dmg) | ⭐ Recommended |
+| Linux (AppImage) | [HackLayer-CTF-1.1.0.AppImage](https://github.com/HackLayerX/hacklayer-ctf/releases/download/v1.1.0/HackLayer-CTF-1.1.0.AppImage) | ⭐ Recommended |
+| All Releases | [GitHub Releases](https://github.com/HackLayerX/hacklayer-ctf/releases) | |
 
 ## Install
 
@@ -75,10 +75,10 @@ curl -fsSL https://raw.githubusercontent.com/HackLayerX/hacklayer-ctf/main/docs/
 Verify your download is legit:
 
 ```
-9D926AAEC5FE46F2EDA5FF310135856737C221360D419DCDB68805D3F4934706  HackLayer-CTF-Setup-1.1.0.exe
-D93D787A62986BE64975BF51A9FE453918C7923681FA2B0D74BD575F94C65BCD  HackLayer-CTF-1.1.0-portable.exe
-28498820A75BD27E57F2A5EBDB0AB25192596D5CBB0F99C5DD0343E9B97A724E  HackLayer-CTF-1.1.0-arm64.dmg
-F69844C3F8D5B0862571F73DE834EBE4E99BD95477B0B827B8306BC86F959D27  HackLayer-CTF-1.1.0.AppImage
+605A87F8D942CA63828B1BE523C58972352F14EFB83FE4F3C4DA48622F9234E8  HackLayer-CTF-Setup-1.1.0.exe
+AAD5F747E3BD1CFB3B5D42F86B584BE966EC9A0BD787C278AB736FD29082E9D8  HackLayer-CTF-1.1.0-portable.exe
+05F8185665CBC44BA32C73FE0F94CD59DF2C85EE553C4ADDFE0F5A8EF7761BB3  HackLayer-CTF-1.1.0-arm64.dmg
+C623B3D014539AFC8A6FDD6B33496BA2CBDAC3C9B9FF8581E881B984043AEF2B  HackLayer-CTF-1.1.0.AppImage
 ```
 
 Check with:
