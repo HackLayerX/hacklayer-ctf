@@ -5,7 +5,7 @@ Kiosk-mode CTF platform. One command to install, works offline.
 ## Download
 
 | Platform | Link | |
-|----------|------|---|
+| -------- | ---- | - |
 | Windows (Setup) | [HackLayer-CTF-Setup-1.2.0.exe](https://github.com/HackLayerX/hacklayer-ctf/releases/download/v1.2.0/HackLayer-CTF-Setup-1.2.0.exe) | ⭐ Recommended |
 | Windows (Portable) | [HackLayer CTF 1.2.0.exe](https://github.com/HackLayerX/hacklayer-ctf/releases/download/v1.2.0/HackLayer.CTF.1.2.0.exe) | ⭐ Recommended |
 | macOS (Apple Silicon) | [HackLayer-CTF-1.2.0-arm64.dmg](https://github.com/HackLayerX/hacklayer-ctf/releases/download/v1.2.0/HackLayer-CTF-1.2.0-arm64.dmg) | ⭐ Recommended |
@@ -74,7 +74,7 @@ curl -fsSL https://raw.githubusercontent.com/HackLayerX/hacklayer-ctf/main/docs/
 
 Verify your download is legit:
 
-```
+```text
 e1cc9026ebcf57a43210ad39cbf74e1fbe5e42dfeaa00ee99ff2a30613eba15b  HackLayer CTF 1.2.0.exe
 b21df698c67b46e6718b5f912ae3ac366096e0fe7087bc71c4913b5d2569889c  HackLayer-CTF-Setup-1.2.0.exe
 9cbb6806d40779296977137d0ab9fb348f4ebd707af037e0d2016c46491ef481  HackLayer-CTF-1.2.0-arm64.dmg
