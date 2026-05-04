@@ -1800,6 +1800,10 @@ function navigateBrowser() {
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
             finalUrl = 'https://' + url;
         }
+        // Upgrade HTTP to HTTPS for security (prevents MITM on CTF challenges)
+        if (finalUrl.startsWith('http://')) {
+            finalUrl = finalUrl.replace('http://', 'https://');
+        }
         frame.src = finalUrl;
     }
 }

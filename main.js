@@ -28,7 +28,7 @@ delete process.env.all_proxy;
 // 10. Kill NODE_REPL_HISTORY (info leakage)
 delete process.env.NODE_REPL_HISTORY;
 
-const { app, BrowserWindow, globalShortcut, ipcMain, session, screen, powerMonitor } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, session, screen, powerMonitor, protocol } = require('electron');
 const path = require('path');
 const crypto = require('crypto');
 const fs = require('fs');
@@ -36,6 +36,27 @@ const { execSync, exec } = require('child_process');
 const os = require('os');
 const fetch = globalThis.fetch; // Use built-in fetch (Electron 28+)
 const { autoUpdater } = require('electron-updater');
+
+// ==================== NONCE-BASED CSP ====================
+// Generate a cryptographic nonce per page load to eliminate 'unsafe-inline'
+let currentNonce = '';
+function generateNonce() {
+    currentNonce = crypto.randomBytes(16).toString('base64');
+    return currentNonce;
+}
+
+// Register custom scheme BEFORE app is ready (required by Electron)
+protocol.registerSchemesAsPrivileged([{
+    scheme: 'app',
+    privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        corsEnabled: false,
+        stream: true,
+        allowServiceWorkers: false,
+    }
+}]);
 
 // Enable FaceDetector API for real face detection
 app.commandLine.appendSwitch('enable-experimental-web-platform-features');
@@ -316,6 +337,54 @@ app.whenReady().then(() => {
         return;
     }
 
+    // ==================== CUSTOM PROTOCOL (Nonce Injection) ====================
+    // Serve local files via app:// — injects nonces into <script> tags for CSP compliance
+    protocol.handle('app', async (request) => {
+        const url = new URL(request.url);
+        let filePath = decodeURIComponent(url.pathname);
+        // On Windows, pathname starts with / before drive letter — normalize
+        if (process.platform === 'win32' && filePath.startsWith('/')) {
+            filePath = filePath.substring(1);
+        }
+        const fullPath = path.join(__dirname, filePath);
+
+        // Security: prevent path traversal
+        const resolved = path.resolve(fullPath);
+        if (!resolved.startsWith(path.resolve(__dirname))) {
+            return new Response('Forbidden', { status: 403 });
+        }
+
+        if (!fs.existsSync(resolved)) {
+            return new Response('Not Found', { status: 404 });
+        }
+
+        const ext = path.extname(resolved).toLowerCase();
+
+        if (ext === '.html') {
+            generateNonce();
+            let content = fs.readFileSync(resolved, 'utf8');
+            // Inject nonce into all <script> tags (both inline and src)
+            content = content.replace(/<script(?=\s|>)/gi, `<script nonce="${currentNonce}"`);
+            // Remove meta CSP tags — CSP is enforced centrally via onHeadersReceived
+            content = content.replace(/<meta[^>]*Content-Security-Policy[^>]*>/gi, '');
+            return new Response(content, {
+                headers: { 'Content-Type': 'text/html; charset=utf-8' }
+            });
+        }
+
+        const content = fs.readFileSync(resolved);
+        const mimeTypes = {
+            '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png',
+            '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
+            '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
+            '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf',
+            '.json': 'application/json', '.webp': 'image/webp',
+        };
+        return new Response(content, {
+            headers: { 'Content-Type': mimeTypes[ext] || 'application/octet-stream' }
+        });
+    });
+
     createWindow();
 
     // ==================== AUTO-UPDATER ====================
@@ -362,7 +431,10 @@ app.whenReady().then(() => {
 
     // REQUIRED for Electron 25+ — allows device enumeration (camera/mic listing)
     session.defaultSession.setDevicePermissionHandler((details) => {
-        return true; // Allow all media devices
+        // Only allow audio/video input devices — reject all others
+        if (details.deviceType === 'hid' || details.deviceType === 'usb') return false;
+        // Allow media devices (cameras, microphones)
+        return details.deviceType === 'media' || details.device?.kind === 'audioinput' || details.device?.kind === 'videoinput' || details.device?.kind === 'audiooutput';
     });
 
     // ==================== CONTENT SECURITY POLICY ====================
@@ -370,18 +442,18 @@ app.whenReady().then(() => {
     // data exfiltration via img/form/fetch to attacker-controlled domains
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
         const csp = [
-            "default-src 'self'",
-            "script-src 'self' 'unsafe-inline'", // inline needed for our HTML files
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-            "font-src 'self' https://fonts.gstatic.com",
-            "img-src 'self' data: blob: https:", // avatars from WordPress
-            `connect-src 'self' ${API_BASE.replace('/wp-json/ctf/v1', '')}`, // only our API server
-            "media-src 'self' blob: mediastream:", // camera/mic
-            "frame-src 'self' https: http:", // webview for CTF challenges
+            "default-src 'self' app:",
+            `script-src 'self' app: 'nonce-${currentNonce}'`, // nonce-based — no unsafe-inline
+            "style-src 'self' app: 'unsafe-inline' https://fonts.googleapis.com",
+            "font-src 'self' app: https://fonts.gstatic.com",
+            "img-src 'self' app: data: blob: https:", // avatars from WordPress
+            `connect-src 'self' app: ${API_BASE.replace('/wp-json/ctf/v1', '')}`, // only our API server
+            "media-src 'self' app: blob: mediastream:", // camera/mic
+            "frame-src 'self' https:", // webview for CTF challenges (HTTPS only)
             "object-src 'none'",
-            "base-uri 'self'",
+            "base-uri 'self' app:",
             "form-action 'none'", // block form submissions to external
-            "worker-src 'self' blob:",
+            "worker-src 'self' app: blob:",
         ].join('; ');
         callback({
             responseHeaders: {
@@ -420,7 +492,7 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             contextIsolation: true,
-            sandbox: false,
+            sandbox: true,
             devTools: false,
             webSecurity: true,
             allowRunningInsecureContent: false,
@@ -440,7 +512,7 @@ function createWindow() {
     mainWindow.setMenu(null);
 
     // Always go to login — config is bundled, no setup needed
-    mainWindow.loadFile(path.join(__dirname, 'src', 'login.html'));
+    mainWindow.loadURL('app:///src/login.html');
 
     mainWindow.once('ready-to-show', () => {
         mainWindow.show();
@@ -470,7 +542,7 @@ function createWindow() {
 
     // Block navigation to external URLs in main window (also blocks drag-and-drop file opens)
     mainWindow.webContents.on('will-navigate', (event, url) => {
-        if (!url.startsWith('file://')) {
+        if (!url.startsWith('app://') && !url.startsWith('file://')) {
             event.preventDefault();
         }
     });
@@ -813,7 +885,10 @@ ipcMain.handle('verify-admin-password', (event, password) => {
     const now = Date.now();
     if (adminPasswordLockoutUntil > now) return false;
     const hash = crypto.createHash('sha256').update(password).digest('hex');
-    const valid = hash === ADMIN_PASSWORD_HASH;
+    // Timing-safe comparison to prevent side-channel attacks
+    const hashBuf = Buffer.from(hash, 'utf8');
+    const expectedBuf = Buffer.from(ADMIN_PASSWORD_HASH, 'utf8');
+    const valid = hashBuf.length === expectedBuf.length && crypto.timingSafeEqual(hashBuf, expectedBuf);
     if (!valid) {
         adminPasswordAttempts++;
         if (adminPasswordAttempts >= 5) {
@@ -868,7 +943,7 @@ ipcMain.handle('navigate', (event, page) => {
                 mainWindow.center();
             }
 
-            mainWindow.loadFile(path.join(__dirname, 'src', page));
+            mainWindow.loadURL('app:///src/' + page);
         }
     }
 });
@@ -961,8 +1036,8 @@ app.on('web-contents-created', (event, contents) => {
                 e.preventDefault();
             }
         } else {
-            // Main window: only file:// allowed
-            if (!url.startsWith('file://')) e.preventDefault();
+            // Main window: only app:// and file:// allowed
+            if (!url.startsWith('app://') && !url.startsWith('file://')) e.preventDefault();
         }
     });
 

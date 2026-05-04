@@ -12,3 +12,22 @@ Thumbs.db
 # Sensitive config (contains API secrets)
 config.json
 latest.json
+
+# Build artifacts & release binaries (use GitHub Releases instead)
+release-artifacts/
+release-artifacts-v2/
+release-v1.2.0/
+hacklayer-ctf-download/
+*.zip
+
+# Duplicate app folder (separate repo)
+electron-app/
+
+# Empty/unused
+cp_reviews/
+
+# Legacy CI
+.gitlab-ci.yml
+
+# Lock files (regenerated on npm ci)
+package-lock.json
