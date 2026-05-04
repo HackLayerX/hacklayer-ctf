@@ -14,9 +14,9 @@ $ErrorActionPreference = "Stop"
 # === CONFIG ===
 $BASE_URL = "https://hacklayer.com/downloads"
 $GH_RELEASE_URL = "https://github.com/HackLayerX/hacklayer-ctf/releases/download"
-$MANIFEST_URL = "https://hacklayer.com/downloads/latest.json"
+$MANIFEST_URL = "https://hacklayer.com/downloads/updates/latest.json"
 $GH_MANIFEST_URL = "https://api.github.com/repos/HackLayerX/hacklayer-ctf/releases/latest"
-$VERSION = "1.1.0"
+$VERSION = "1.2.0"
 $fileName = ""
 
 Write-Host ""

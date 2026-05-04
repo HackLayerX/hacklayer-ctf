@@ -6,9 +6,8 @@
 set -e
 
 # === CONFIG ===
-# Public releases repo (main code repo is private)
-GITHUB_USER="SankiiM"
-GITHUB_REPO="hacklayer-ctf-download"
+GITHUB_USER="HackLayerX"
+GITHUB_REPO="hacklayer-ctf"
 
 # Colors
 GREEN='\033[0;32m'
