@@ -37,8 +37,7 @@
         },
         "win": {
             "target": [
-                "nsis",
-                "portable"
+                "nsis"
             ],
             "icon": "assets/icon.ico",
             "requestedExecutionLevel": "asInvoker"
