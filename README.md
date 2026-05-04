@@ -86,10 +86,10 @@ curl -fsSL https://raw.githubusercontent.com/HackLayerX/hacklayer-ctf/main/docs/
 Verify your download is legit:
 
 ```text
-edeb367dadf14e2300a647bf5bce5808602330cbc68d1c784b3ec62fa0f4c63b  HackLayer CTF 1.2.0.exe
-3e097c368317d5b46ee87b3ed2d0d9874d413481ff8018f52ed877464e5bffb4  HackLayer-CTF-Setup-1.2.0.exe
-9e08fe44e36ae7e71a44dd589bccd2e13171f5e69297cf2b6b9b7535672456a6  HackLayer-CTF-1.2.0-arm64.dmg
-0b964e16ce6f7c7e2f50981f07909167a3109fccc0735042d0dd8552d3d271a4  HackLayer-CTF-1.2.0.AppImage
+e1cc9026ebcf57a43210ad39cbf74e1fbe5e42dfeaa00ee99ff2a30613eba15b  HackLayer CTF 1.2.0.exe
+b21df698c67b46e6718b5f912ae3ac366096e0fe7087bc71c4913b5d2569889c  HackLayer-CTF-Setup-1.2.0.exe
+9cbb6806d40779296977137d0ab9fb348f4ebd707af037e0d2016c46491ef481  HackLayer-CTF-1.2.0-arm64.dmg
+51be3c758ea0e05b03f3957abf340a7c81a3a93134216f0dba98aee066fb8f97  HackLayer-CTF-1.2.0.AppImage
 ```
 
 Check with:
