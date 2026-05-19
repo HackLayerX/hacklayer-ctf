@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Dark River Tunnel — Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script>
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        let W, H, time = 0;
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // ─── Vanishing Point ───
+        const VP = () => ({ x: W * 0.5, y: H * 0.28 });
+
+        // ─── Pseudo-random ───
+        function hash(n) { let s = Math.sin(n) * 43758.5453; return s - Math.floor(s); }
+
+        // ─── Convert tunnel coord to screen ───
+        function tToS(xNorm, z) {
+            const vp = VP();
+            const depth = Math.pow(z, 1.4);
+            const tunnelW = W * 0.03 + W * 0.62 * depth;
+            const tunnelH = H * 0.02 + H * 0.5 * depth;
+            return {
+                x: vp.x + xNorm * tunnelW * 0.5,
+                y: vp.y + tunnelH,
+                w: tunnelW,
+                h: tunnelH,
+                depth
+            };
+        }
+
+        // ─── DRAW TUNNEL WALLS (stone brick) ───
+        function drawTunnel() {
+            const vp = VP();
+            const layers = 80;
+
+            for (let i = 0; i < layers; i++) {
+                const z = i / layers;
+                const s = tToS(0, z);
+                const nextZ = (i + 1) / layers;
+                const ns = tToS(0, nextZ);
+
+                // Wall color — darker deeper
+                const shade = Math.floor(12 + z * 25);
+                const shadeR = shade + 3;
+                const shadeG = shade;
+                const shadeB = shade - 2;
+
+                // Left wall
+                ctx.fillStyle = `rgb(${shadeR},${shadeG},${Math.max(0, shadeB)})`;
+                ctx.beginPath();
+                ctx.moveTo(s.x - s.w * 0.5, s.y);
+                ctx.lineTo(ns.x - ns.w * 0.5, ns.y);
+                ctx.lineTo(ns.x - ns.w * 0.5 - ns.w * 0.08, ns.y - ns.h * 0.6);
+                ctx.lineTo(s.x - s.w * 0.5 - s.w * 0.08, s.y - s.h * 0.6);
+                ctx.closePath();
+                ctx.fill();
+
+                // Right wall
+                ctx.beginPath();
+                ctx.moveTo(s.x + s.w * 0.5, s.y);
+                ctx.lineTo(ns.x + ns.w * 0.5, ns.y);
+                ctx.lineTo(ns.x + ns.w * 0.5 + ns.w * 0.08, ns.y - ns.h * 0.6);
+                ctx.lineTo(s.x + s.w * 0.5 + s.w * 0.08, s.y - s.h * 0.6);
+                ctx.closePath();
+                ctx.fill();
+
+                // Ceiling (arch)
+                const ceilShade = Math.floor(8 + z * 15);
+                ctx.fillStyle = `rgb(${ceilShade + 2},${ceilShade},${ceilShade})`;
+                ctx.beginPath();
+                ctx.moveTo(s.x - s.w * 0.5 - s.w * 0.08, s.y - s.h * 0.6);
+                ctx.lineTo(ns.x - ns.w * 0.5 - ns.w * 0.08, ns.y - ns.h * 0.6);
+                // Arch curve
+                ctx.lineTo(ns.x, ns.y - ns.h * 0.85);
+                ctx.lineTo(ns.x + ns.w * 0.5 + ns.w * 0.08, ns.y - ns.h * 0.6);
+                ctx.lineTo(s.x + s.w * 0.5 + s.w * 0.08, s.y - s.h * 0.6);
+                ctx.lineTo(s.x, s.y - s.h * 0.85);
+                ctx.closePath();
+                ctx.fill();
+
+                // Brick lines (horizontal)
+                if (i % 4 === 0 && z > 0.1) {
+                    ctx.strokeStyle = `rgba(0,0,0,${0.15 + z * 0.1})`;
+                    ctx.lineWidth = 0.5 + z;
+                    // Left wall bricks
+                    ctx.beginPath();
+                    ctx.moveTo(s.x - s.w * 0.5, s.y - s.h * 0.1);
+                    ctx.lineTo(s.x - s.w * 0.5 - s.w * 0.08, s.y - s.h * 0.5);
+                    ctx.stroke();
+                    // Right wall bricks
+                    ctx.beginPath();
+                    ctx.moveTo(s.x + s.w * 0.5, s.y - s.h * 0.1);
+                    ctx.lineTo(s.x + s.w * 0.5 + s.w * 0.08, s.y - s.h * 0.5);
+                    ctx.stroke();
+                }
+
+                // Vertical brick lines
+                if (i % 6 === 0 && z > 0.15) {
+                    const brickAlpha = 0.08 + z * 0.08;
+                    ctx.strokeStyle = `rgba(0,0,0,${brickAlpha})`;
+                    ctx.lineWidth = 0.5 + z * 0.8;
+                    // Left wall vertical bricks
+                    for (let b = 0; b < 3; b++) {
+                        const bx = s.x - s.w * 0.5 - s.w * 0.02 * (b + 1);
+                        const by1 = s.y - s.h * (0.1 + b * 0.15);
+                        const by2 = s.y - s.h * (0.25 + b * 0.15);
+                        ctx.beginPath();
+                        ctx.moveTo(bx, by1);
+                        ctx.lineTo(bx, by2);
+                        ctx.stroke();
+                    }
+                    // Right wall
+                    for (let b = 0; b < 3; b++) {
+                        const bx = s.x + s.w * 0.5 + s.w * 0.02 * (b + 1);
+                        const by1 = s.y - s.h * (0.1 + b * 0.15);
+                        const by2 = s.y - s.h * (0.25 + b * 0.15);
+                        ctx.beginPath();
+                        ctx.moveTo(bx, by1);
+                        ctx.lineTo(bx, by2);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        // ─── DRAW GATE (at vanishing point) ───
+        function drawGate() {
+            const vp = VP();
+            const gateW = W * 0.08;
+            const gateH = H * 0.15;
+            const gx = vp.x;
+            const gy = vp.y + gateH * 0.3;
+
+            // Gate archway glow (mysterious green/teal light from beyond)
+            const gateGlow = ctx.createRadialGradient(gx, gy - gateH * 0.2, 0, gx, gy - gateH * 0.2, gateW * 2);
+            gateGlow.addColorStop(0, `rgba(0,180,120,${0.06 + Math.sin(time * 0.001) * 0.02})`);
+            gateGlow.addColorStop(0.5, `rgba(0,80,60,${0.03 + Math.sin(time * 0.0015) * 0.01})`);
+            gateGlow.addColorStop(1, 'transparent');
+            ctx.fillStyle = gateGlow;
+            ctx.fillRect(gx - gateW * 2, gy - gateH * 1.5, gateW * 4, gateH * 2);
+
+            // Gate frame — heavy stone pillars
+            const pillarW = gateW * 0.2;
+
+            // Left pillar
+            ctx.fillStyle = '#1a1714';
+            ctx.fillRect(gx - gateW * 0.5, gy - gateH * 0.8, pillarW, gateH * 1.1);
+            // Right pillar
+            ctx.fillRect(gx + gateW * 0.5 - pillarW, gy - gateH * 0.8, pillarW, gateH * 1.1);
+
+            // Arch top
+            ctx.strokeStyle = '#1a1714';
+            ctx.lineWidth = pillarW;
+            ctx.beginPath();
+            ctx.arc(gx, gy - gateH * 0.7, gateW * 0.5 - pillarW * 0.5, Math.PI, 0);
+            ctx.stroke();
+
+            // Inner dark void
+            ctx.fillStyle = '#020304';
+            ctx.beginPath();
+            ctx.arc(gx, gy - gateH * 0.7, gateW * 0.35, Math.PI, 0);
+            ctx.lineTo(gx + gateW * 0.35, gy + gateH * 0.3);
+            ctx.lineTo(gx - gateW * 0.35, gy + gateH * 0.3);
+            ctx.closePath();
+            ctx.fill();
+
+            // Gate chain/bars (iron gate)
+            ctx.strokeStyle = 'rgba(60,50,40,0.4)';
+            ctx.lineWidth = 1;
+            for (let i = -3; i <= 3; i++) {
+                const bx = gx + i * (gateW * 0.08);
+                ctx.beginPath();
+                ctx.moveTo(bx, gy - gateH * 0.7 - Math.abs(i) * 3);
+                ctx.lineTo(bx, gy + gateH * 0.3);
+                ctx.stroke();
+            }
+
+            // Horizontal bar
+            ctx.beginPath();
+            ctx.moveTo(gx - gateW * 0.35, gy - gateH * 0.3);
+            ctx.lineTo(gx + gateW * 0.35, gy - gateH * 0.3);
+            ctx.stroke();
+
+            // Skull/emblem hint at top of gate
+            const skullY = gy - gateH * 0.95;
+            ctx.fillStyle = `rgba(80,70,55,${0.3 + Math.sin(time * 0.002) * 0.05})`;
+            ctx.beginPath();
+            ctx.arc(gx, skullY, 4, 0, Math.PI * 2);
+            ctx.fill();
+            // Eyes
+            ctx.fillStyle = `rgba(0,200,100,${0.2 + Math.sin(time * 0.003) * 0.1})`;
+            ctx.fillRect(gx - 2.5, skullY - 1, 1.5, 1.5);
+            ctx.fillRect(gx + 1, skullY - 1, 1.5, 1.5);
+        }
+
+        // ─── DRAW WATER ───
+        function drawWater() {
+            const vp = VP();
+            const waterStartZ = 0.05;
+
+            for (let i = 0; i < 70; i++) {
+                const z = waterStartZ + (1 - waterStartZ) * (i / 70);
+                const s = tToS(0, z);
+                const nz = waterStartZ + (1 - waterStartZ) * ((i + 1) / 70);
+                const ns = tToS(0, nz);
+
+                // Water surface
+                const waterW = s.w * 0.75;
+                const nextWaterW = ns.w * 0.75;
+                const waterAlpha = z * 0.7;
+
+                // Deep dark water gradient
+                const r = Math.floor(2 + z * 8);
+                const g = Math.floor(10 + z * 30 + Math.sin(time * 0.001 + i * 0.3) * 5);
+                const b = Math.floor(20 + z * 40);
+
+                ctx.fillStyle = `rgba(${r},${g},${b},${waterAlpha})`;
+                ctx.beginPath();
+                ctx.moveTo(s.x - waterW * 0.5, s.y);
+                ctx.lineTo(ns.x - nextWaterW * 0.5, ns.y);
+                ctx.lineTo(ns.x + nextWaterW * 0.5, ns.y);
+                ctx.lineTo(s.x + waterW * 0.5, s.y);
+                ctx.closePath();
+                ctx.fill();
+
+                // Water ripples
+                if (i % 5 === 0 && z > 0.2) {
+                    const rippleOffset = Math.sin(time * 0.002 + i * 0.7) * waterW * 0.15;
+                    const rippleAlpha = 0.03 + z * 0.06;
+                    ctx.strokeStyle = `rgba(40,120,140,${rippleAlpha})`;
+                    ctx.lineWidth = 0.5 + z;
+                    ctx.beginPath();
+                    ctx.ellipse(s.x + rippleOffset, s.y, waterW * (0.1 + z * 0.15), 1 + z * 2, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // Water reflections (torch light on water)
+                if (i % 8 === 0 && z > 0.15) {
+                    const refAlpha = 0.02 + Math.sin(time * 0.003 + i) * 0.015;
+                    const refG = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, waterW * 0.3);
+                    refG.addColorStop(0, `rgba(200,120,30,${refAlpha * z})`);
+                    refG.addColorStop(1, 'transparent');
+                    ctx.fillStyle = refG;
+                    ctx.fillRect(s.x - waterW * 0.3, s.y - 5, waterW * 0.6, 10);
+                }
+            }
+
+            // Water surface shimmer near boat
+            for (let i = 0; i < 6; i++) {
+                const sy = H * 0.78 + i * 15;
+                const sx = W * 0.5 + Math.sin(time * 0.002 + i * 1.5) * 30;
+                ctx.strokeStyle = `rgba(30,100,130,${0.08 - i * 0.01})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.ellipse(sx, sy, 40 + i * 15, 2, 0, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        // ─── DRAW TORCHES ───
+        function drawTorches() {
+            const torchPairs = [
+                { z: 0.15 }, { z: 0.30 }, { z: 0.45 }, { z: 0.60 }, { z: 0.75 }, { z: 0.90 }
+            ];
+
+            torchPairs.forEach((tp, idx) => {
+                [-1, 1].forEach(side => {
+                    const s = tToS(side, tp.z);
+                    const wallX = s.x + side * s.w * 0.08;
+                    const torchY = s.y - s.h * 0.35;
+
+                    // Torch bracket (metal)
+                    ctx.strokeStyle = `rgba(80,65,45,${0.3 + tp.z * 0.3})`;
+                    ctx.lineWidth = 1 + tp.z * 2;
+                    ctx.beginPath();
+                    ctx.moveTo(wallX, torchY + 5 * tp.z);
+                    ctx.lineTo(wallX + side * (-8 * tp.z), torchY);
+                    ctx.stroke();
+
+                    // Torch head
+                    ctx.fillStyle = `rgba(60,45,25,${0.4 + tp.z * 0.3})`;
+                    const torchHeadX = wallX + side * (-8 * tp.z);
+                    ctx.fillRect(torchHeadX - 1.5 * tp.z, torchY - 3 * tp.z, 3 * tp.z, 6 * tp.z);
+
+                    // Fire
+                    const flicker1 = Math.sin(time * 0.01 + idx * 3 + side) * 0.3;
+                    const flicker2 = Math.sin(time * 0.015 + idx * 5 + side * 2) * 0.2;
+                    const fireIntensity = 0.6 + flicker1 + flicker2;
+                    const fireR = (8 + tp.z * 30) * fireIntensity;
+
+                    // Outer glow (warm)
+                    const outerGlow = ctx.createRadialGradient(torchHeadX, torchY - 4 * tp.z, 0, torchHeadX, torchY - 4 * tp.z, fireR * 3);
+                    outerGlow.addColorStop(0, `rgba(255,140,30,${0.06 * tp.z * fireIntensity})`);
+                    outerGlow.addColorStop(0.4, `rgba(255,80,10,${0.02 * tp.z * fireIntensity})`);
+                    outerGlow.addColorStop(1, 'transparent');
+                    ctx.fillStyle = outerGlow;
+                    ctx.fillRect(torchHeadX - fireR * 3, torchY - 4 * tp.z - fireR * 3, fireR * 6, fireR * 6);
+
+                    // Inner fire
+                    const innerGlow = ctx.createRadialGradient(torchHeadX, torchY - 5 * tp.z, 0, torchHeadX, torchY - 5 * tp.z, fireR);
+                    innerGlow.addColorStop(0, `rgba(255,220,80,${0.5 * tp.z * fireIntensity})`);
+                    innerGlow.addColorStop(0.3, `rgba(255,140,20,${0.35 * tp.z * fireIntensity})`);
+                    innerGlow.addColorStop(0.7, `rgba(255,60,10,${0.15 * tp.z * fireIntensity})`);
+                    innerGlow.addColorStop(1, 'transparent');
+                    ctx.fillStyle = innerGlow;
+                    ctx.fillRect(torchHeadX - fireR, torchY - 5 * tp.z - fireR, fireR * 2, fireR * 2);
+
+                    // Fire tongues (triangular flame shapes)
+                    const tongueH = fireR * (1.2 + flicker1 * 0.5);
+                    ctx.fillStyle = `rgba(255,200,50,${0.25 * tp.z * fireIntensity})`;
+                    ctx.beginPath();
+                    ctx.moveTo(torchHeadX - 2 * tp.z, torchY - 3 * tp.z);
+                    ctx.lineTo(torchHeadX + flicker2 * 3, torchY - 3 * tp.z - tongueH);
+                    ctx.lineTo(torchHeadX + 2 * tp.z, torchY - 3 * tp.z);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Wall light splash
+                    const wallGlow = ctx.createRadialGradient(wallX, torchY, 0, wallX, torchY, fireR * 4);
+                    wallGlow.addColorStop(0, `rgba(200,100,20,${0.04 * tp.z * fireIntensity})`);
+                    wallGlow.addColorStop(1, 'transparent');
+                    ctx.fillStyle = wallGlow;
+                    ctx.fillRect(wallX - fireR * 4, torchY - fireR * 4, fireR * 8, fireR * 8);
+                });
+            });
+        }
+
+        // ─── DRAW BOAT ───
+        function drawBoat() {
+            const boatCX = W * 0.5;
+            const boatY = H * 0.86;
+            const boatW = W * 0.22;
+            const boatH = H * 0.06;
+
+            // Boat sway
+            const sway = Math.sin(time * 0.001) * 2;
+            const tilt = Math.sin(time * 0.0008) * 0.01;
+
+            ctx.save();
+            ctx.translate(boatCX, boatY + sway);
+            ctx.rotate(tilt);
+
+            // Boat hull (dark wood)
+            const hullGrad = ctx.createLinearGradient(-boatW * 0.5, 0, boatW * 0.5, 0);
+            hullGrad.addColorStop(0, '#1a1208');
+            hullGrad.addColorStop(0.5, '#251a0e');
+            hullGrad.addColorStop(1, '#1a1208');
+
+            // Hull shape — pointed bow (front extends up)
+            ctx.fillStyle = hullGrad;
+            ctx.beginPath();
+            ctx.moveTo(0, -boatH * 1.8); // Bow tip (pointing forward/up)
+            ctx.quadraticCurveTo(-boatW * 0.12, -boatH * 0.5, -boatW * 0.4, boatH * 0.2);
+            ctx.lineTo(-boatW * 0.42, boatH * 0.6);
+            ctx.quadraticCurveTo(0, boatH * 0.9, boatW * 0.42, boatH * 0.6);
+            ctx.lineTo(boatW * 0.4, boatH * 0.2);
+            ctx.quadraticCurveTo(boatW * 0.12, -boatH * 0.5, 0, -boatH * 1.8);
+            ctx.closePath();
+            ctx.fill();
+
+            // Hull edge highlight
+            ctx.strokeStyle = 'rgba(100,75,40,0.25)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Planks
+            ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+            ctx.lineWidth = 0.5;
+            for (let p = -3; p <= 3; p++) {
+                ctx.beginPath();
+                ctx.moveTo(-boatW * 0.35, boatH * (p * 0.12));
+                ctx.lineTo(boatW * 0.35, boatH * (p * 0.12));
+                ctx.stroke();
+            }
+
+            // Bow ornament (small skull or metal piece)
+            ctx.fillStyle = 'rgba(80,65,45,0.5)';
+            ctx.beginPath();
+            ctx.arc(0, -boatH * 1.6, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Lantern on bow
+            const lanternFlicker = 0.5 + Math.sin(time * 0.012) * 0.2 + Math.sin(time * 0.019) * 0.15;
+            const lanternGlow = ctx.createRadialGradient(0, -boatH * 2.2, 0, 0, -boatH * 2.2, 25);
+            lanternGlow.addColorStop(0, `rgba(255,180,50,${0.3 * lanternFlicker})`);
+            lanternGlow.addColorStop(0.5, `rgba(255,100,20,${0.1 * lanternFlicker})`);
+            lanternGlow.addColorStop(1, 'transparent');
+            ctx.fillStyle = lanternGlow;
+            ctx.fillRect(-25, -boatH * 2.2 - 25, 50, 50);
+
+            // Lantern body
+            ctx.strokeStyle = 'rgba(80,60,30,0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, -boatH * 1.6);
+            ctx.lineTo(0, -boatH * 2.3);
+            ctx.stroke();
+            ctx.fillStyle = `rgba(255,200,80,${0.4 * lanternFlicker})`;
+            ctx.fillRect(-2, -boatH * 2.4, 4, 5);
+
+            ctx.restore();
+
+            // Bow wake (water splash at front of boat)
+            const wakeY = boatY + sway - boatH * 1.2;
+            for (let i = 0; i < 4; i++) {
+                const wakeAlpha = 0.04 - i * 0.008;
+                const wakeSpread = 8 + i * 12;
+                ctx.strokeStyle = `rgba(60,140,160,${wakeAlpha})`;
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.ellipse(boatCX, wakeY - i * 6, wakeSpread, 2, 0, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        // ─── EMBERS / PARTICLES ───
+        const embers = [];
+        for (let i = 0; i < 40; i++) {
+            embers.push({
+                x: Math.random(), y: Math.random(),
+                vx: (Math.random() - 0.5) * 0.0002,
+                vy: -Math.random() * 0.0004 - 0.0001,
+                life: Math.random(),
+                size: 0.5 + Math.random() * 1.5,
+                hue: 20 + Math.random() * 30,
+            });
+        }
+
+        function drawEmbers() {
+            embers.forEach(e => {
+                e.x += e.vx + Math.sin(time * 0.001 + e.life * 10) * 0.00005;
+                e.y += e.vy;
+                e.life -= 0.001;
+
+                if (e.life <= 0 || e.y < 0) {
+                    e.x = 0.3 + Math.random() * 0.4;
+                    e.y = 0.5 + Math.random() * 0.4;
+                    e.life = 0.8 + Math.random() * 0.2;
+                }
+
+                const sx = e.x * W;
+                const sy = e.y * H;
+                const alpha = e.life * 0.5;
+
+                ctx.fillStyle = `rgba(255,${120 + Math.floor(e.hue)},20,${alpha})`;
+                ctx.fillRect(sx, sy, e.size, e.size);
+
+                // Ember glow
+                const eg = ctx.createRadialGradient(sx, sy, 0, sx, sy, e.size * 3);
+                eg.addColorStop(0, `rgba(255,${100 + Math.floor(e.hue)},0,${alpha * 0.3})`);
+                eg.addColorStop(1, 'transparent');
+                ctx.fillStyle = eg;
+                ctx.fillRect(sx - e.size * 3, sy - e.size * 3, e.size * 6, e.size * 6);
+            });
+        }
+
+        // ─── FOG ───
+        function drawFog() {
+            // Low fog near water
+            for (let i = 0; i < 5; i++) {
+                const fx = W * (0.2 + i * 0.15) + Math.sin(time * 0.0003 + i * 2) * 80;
+                const fy = H * (0.6 + i * 0.04);
+                const fr = 100 + i * 30;
+                const fg = ctx.createRadialGradient(fx, fy, 0, fx, fy, fr);
+                fg.addColorStop(0, `rgba(15,25,30,${0.12 + Math.sin(time * 0.0005 + i) * 0.04})`);
+                fg.addColorStop(1, 'transparent');
+                ctx.fillStyle = fg;
+                ctx.fillRect(fx - fr, fy - fr, fr * 2, fr * 2);
+            }
+
+            // High mist near ceiling
+            for (let i = 0; i < 3; i++) {
+                const mx = W * (0.3 + i * 0.2) + Math.sin(time * 0.0002 + i * 5) * 60;
+                const my = H * (0.2 + i * 0.05);
+                const mr = 120;
+                const mg = ctx.createRadialGradient(mx, my, 0, mx, my, mr);
+                mg.addColorStop(0, `rgba(10,15,20,${0.1 + Math.sin(time * 0.0008 + i) * 0.03})`);
+                mg.addColorStop(1, 'transparent');
+                ctx.fillStyle = mg;
+                ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
+            }
+        }
+
+        // ─── DRIPPING WATER FROM CEILING ───
+        const drips = [];
+        for (let i = 0; i < 6; i++) {
+            drips.push({
+                x: W * (0.2 + Math.random() * 0.6),
+                y: 0,
+                startY: H * (0.15 + Math.random() * 0.1),
+                speed: 1 + Math.random() * 2,
+                delay: Math.random() * 5000,
+                active: false,
+                ripple: 0,
+            });
+        }
+
+        function drawDrips() {
+            drips.forEach(d => {
+                if (!d.active) {
+                    if ((time + d.delay) % 4000 < 50) {
+                        d.active = true;
+                        d.y = d.startY;
+                        d.ripple = 0;
+                    }
+                    // Show ripple
+                    if (d.ripple > 0 && d.ripple < 30) {
+                        d.ripple++;
+                        const rippleAlpha = 0.1 * (1 - d.ripple / 30);
+                        ctx.strokeStyle = `rgba(60,140,170,${rippleAlpha})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.ellipse(d.x, H * 0.7, d.ripple * 2, d.ripple * 0.5, 0, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                    return;
+                }
+
+                d.y += d.speed;
+
+                // Draw drip
+                ctx.fillStyle = `rgba(80,160,200,0.3)`;
+                ctx.beginPath();
+                ctx.ellipse(d.x, d.y, 1, 2.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Splash
+                if (d.y > H * 0.7) {
+                    d.active = false;
+                    d.ripple = 1;
+                }
+            });
+        }
+
+        // ─── VIGNETTE ───
+        function drawVignette() {
+            const vg = ctx.createRadialGradient(W * 0.5, H * 0.5, W * 0.2, W * 0.5, H * 0.5, W * 0.7);
+            vg.addColorStop(0, 'transparent');
+            vg.addColorStop(1, 'rgba(0,0,0,0.5)');
+            ctx.fillStyle = vg;
+            ctx.fillRect(0, 0, W, H);
+        }
+
+        // ─── MAIN RENDER LOOP ───
+        function render(ts) {
+            time = ts;
+
+            // Clear
+            ctx.fillStyle = '#030406';
+            ctx.fillRect(0, 0, W, H);
+
+            // Draw layers back to front
+            drawGate();
+            drawTunnel();
+            drawWater();
+            drawTorches();
+            drawFog();
+            drawEmbers();
+            drawDrips();
+            drawBoat();
+            drawVignette();
+
+            requestAnimationFrame(render);
+        }
+
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

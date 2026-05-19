@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>CTF Background Selector — HackLayer</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #08080c;
+            color: #d4d4dc;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 20px 20px;
+            border-bottom: 1px solid #1c1c28;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #00e87b;
+            letter-spacing: 2px;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: #6b6b80;
+            margin-top: 8px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+            padding: 32px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: #0e0e14;
+            border: 2px solid #1c1c28;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .card:hover {
+            border-color: #00e87b44;
+            transform: translateY(-2px);
+        }
+
+        .card.active {
+            border-color: #00e87b;
+            box-shadow: 0 0 30px rgba(0, 232, 123, 0.1);
+        }
+
+        .card-preview {
+            width: 100%;
+            height: 280px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-preview canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .card-info {
+            padding: 16px 20px;
+            border-top: 1px solid #1c1c28;
+        }
+
+        .card-info h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .card-info p {
+            font-size: 12px;
+            color: #6b6b80;
+        }
+
+        .card-info .tag {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 2px 8px;
+            background: rgba(0, 232, 123, 0.1);
+            color: #00e87b;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .tag-current {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+
+        /* Fullscreen preview */
+        #fullPreview {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: none;
+            background: #08080c;
+        }
+
+        #fullPreview canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        #fullPreview .close-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            background: rgba(14, 14, 20, 0.8);
+            border: 1px solid #1c1c28;
+            color: #d4d4dc;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            backdrop-filter: blur(8px);
+        }
+
+        #fullPreview .close-btn:hover {
+            border-color: #00e87b;
+            color: #00e87b;
+        }
+
+        #fullPreview .label {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            background: rgba(14, 14, 20, 0.8);
+            border: 1px solid #1c1c28;
+            color: #6b6b80;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            backdrop-filter: blur(8px);
+            text-align: center;
+        }
+
+        #fullPreview .label span {
+            color: #00e87b;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>🎮 CTF BACKGROUND SELECTOR</h1>
+        <p>Click any card to see fullscreen preview. Pick the one you like for secure-env.</p>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <!-- Fullscreen Preview -->
+    <div id="fullPreview">
+        <canvas id="fullCanvas"></canvas>
+        <button class="close-btn" onclick="closeFullscreen()">✕ ESC to close</button>
+        <div class="label"><span id="fullLabel">—</span></div>
+    </div>
+
+    <script>
+        // ============================================================
+        // ANIMATION DEFINITIONS
+        // ============================================================
+
+        const ANIMATIONS = [
+
+            // ─── 1. CHARON'S PASSAGE (current) ───
+            {
+                name: "Charon's Passage",
+                desc: "Dark underground tunnel with boat, torches, fog, and flowing water. Current animation.",
+                tag: "CURRENT", tagClass: "tag-current",
+                draw: (ctx, w, h, t) => {
+                    // Vanishing point
+                    const vpX = w * 0.5, vpY = h * 0.32;
+
+                    // Dark background
+                    const bg = ctx.createLinearGradient(0, 0, 0, h);
+                    bg.addColorStop(0, '#05080a');
+                    bg.addColorStop(0.3, '#0a0e12');
+                    bg.addColorStop(1, '#060a10');
+                    ctx.fillStyle = bg;
+                    ctx.fillRect(0, 0, w, h);
+
+                    // Tunnel walls
+                    for (let z = 0; z < 1; z += 0.02) {
+                        const scale = Math.pow(z, 1.5);
+                        const tw = w * 0.04 + w * 0.56 * scale;
+                        const sx = vpX, sy = vpY + h * 0.68 * Math.pow(z, 1.2);
+
+                        // Stone texture lines
+                        const alpha = z * 0.3;
+                        ctx.strokeStyle = `rgba(60,50,40,${alpha})`;
+                        ctx.lineWidth = 1 + z * 2;
+                        ctx.beginPath();
+                        ctx.moveTo(sx - tw * 0.5, sy);
+                        ctx.lineTo(sx + tw * 0.5, sy);
+                        ctx.stroke();
+                    }
+
+                    // Water
+                    const waterY = h * 0.65;
+                    const wg = ctx.createLinearGradient(0, waterY, 0, h);
+                    wg.addColorStop(0, 'rgba(0,20,40,0.6)');
+                    wg.addColorStop(1, 'rgba(0,10,25,0.9)');
+                    ctx.fillStyle = wg;
+                    ctx.fillRect(0, waterY, w, h - waterY);
+
+                    // Water ripples
+                    for (let i = 0; i < 8; i++) {
+                        const ry = waterY + 20 + i * 25;
+                        const rx = w * 0.5 + Math.sin(t * 0.001 + i) * 50;
+                        ctx.strokeStyle = `rgba(0,150,200,${0.05 + Math.sin(t * 0.002 + i) * 0.03})`;
+                        ctx.beginPath();
+                        ctx.ellipse(rx, ry, 80 + i * 20, 3, 0, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+
+                    // Torches
+                    for (let i = 0; i < 8; i++) {
+                        const side = i % 2 === 0 ? -1 : 1;
+                        const z = (i + 0.5) / 8;
+                        const scale = Math.pow(z, 1.5);
+                        const tw = w * 0.04 + w * 0.56 * scale;
+                        const tx = vpX + side * tw * 0.5;
+                        const ty = vpY + h * 0.68 * Math.pow(z, 1.2) - 20 * scale;
+                        const flicker = 0.5 + Math.sin(t * 0.008 + i * 2) * 0.3;
+                        const r = 15 + z * 40;
+
+                        const tg = ctx.createRadialGradient(tx, ty, 0, tx, ty, r);
+                        tg.addColorStop(0, `rgba(255,${140 + Math.sin(t * 0.01 + i) * 30},20,${flicker * 0.4 * z})`);
+                        tg.addColorStop(1, 'transparent');
+                        ctx.fillStyle = tg;
+                        ctx.fillRect(tx - r, ty - r, r * 2, r * 2);
+                    }
+
+                    // Fog
+                    for (let i = 0; i < 3; i++) {
+                        const fy = h * 0.4 + i * 80;
+                        const fx = w * 0.5 + Math.sin(t * 0.0005 + i * 3) * 200;
+                        const fg = ctx.createRadialGradient(fx, fy, 0, fx, fy, 200);
+                        fg.addColorStop(0, `rgba(20,30,40,${0.15 + Math.sin(t * 0.001 + i) * 0.05})`);
+                        fg.addColorStop(1, 'transparent');
+                        ctx.fillStyle = fg;
+                        ctx.fillRect(fx - 200, fy - 200, 400, 400);
+                    }
+
+                    // Boat bow
+                    ctx.fillStyle = '#1a1410';
+                    ctx.beginPath();
+                    ctx.moveTo(w * 0.5, h * 0.88);
+                    ctx.lineTo(w * 0.35, h + 5);
+                    ctx.lineTo(w * 0.65, h + 5);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(80,60,40,0.3)';
+                    ctx.stroke();
+                }
+            },
+
+            // ─── 2. CYBER GRID ───
+            {
+                name: "Cyber Grid",
+                desc: "Tron-style neon grid rushing towards you. Futuristic hacker aesthetic.",
+                tag: "NEON",
+                draw: (ctx, w, h, t) => {
+                    ctx.fillStyle = '#05050a';
+                    ctx.fillRect(0, 0, w, h);
+
+                    const vpY = h * 0.4;
+                    const speed = t * 0.001;
+
+                    // Horizontal lines (ground)
+                    for (let i = 0; i < 20; i++) {
+                        const z = ((i / 20 + speed * 0.3) % 1);
+                        const y = vpY + (h - vpY) * Math.pow(z, 0.8);
+                        const alpha = z * 0.6;
+                        ctx.strokeStyle = `rgba(0,232,123,${alpha * 0.4})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(0, y);
+                        ctx.lineTo(w, y);
+                        ctx.stroke();
+                    }
+
+                    // Vertical lines (perspective)
+                    for (let i = -10; i <= 10; i++) {
+                        const x = w * 0.5 + i * (w * 0.06);
+                        const bx = w * 0.5 + i * (w * 0.5);
+                        const alpha = 1 - Math.abs(i) / 10;
+                        ctx.strokeStyle = `rgba(0,232,123,${alpha * 0.25})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(w * 0.5, vpY);
+                        ctx.lineTo(bx, h);
+                        ctx.stroke();
+                    }
+
+                    // Horizon glow
+                    const hg = ctx.createRadialGradient(w * 0.5, vpY, 0, w * 0.5, vpY, w * 0.4);
+                    hg.addColorStop(0, 'rgba(0,232,123,0.08)');
+                    hg.addColorStop(0.5, 'rgba(0,100,200,0.03)');
+                    hg.addColorStop(1, 'transparent');
+                    ctx.fillStyle = hg;
+                    ctx.fillRect(0, 0, w, h);
+
+                    // Sun/circle at horizon
+                    ctx.strokeStyle = 'rgba(0,232,123,0.15)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(w * 0.5, vpY, 80, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(w * 0.5, vpY, 60, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    // Scan line
+                    const scanY = (t * 0.1) % h;
+                    ctx.fillStyle = 'rgba(0,232,123,0.03)';
+                    ctx.fillRect(0, scanY - 2, w, 4);
+
+                    // Floating particles
+                    for (let i = 0; i < 30; i++) {
+                        const px = (Math.sin(i * 7.3 + t * 0.001) * 0.5 + 0.5) * w;
+                        const py = (Math.cos(i * 4.1 + t * 0.0008) * 0.5 + 0.5) * h;
+                        const ps = 1 + Math.sin(t * 0.003 + i) * 0.5;
+                        ctx.fillStyle = `rgba(0,232,123,${0.2 + Math.sin(t * 0.002 + i) * 0.1})`;
+                        ctx.fillRect(px, py, ps, ps);
+                    }
+                }
+            },
+
+            // ─── 3. MATRIX RAIN ───
+            {
+                name: "Matrix Rain",
+                desc: "Classic falling code / digital rain. Iconic hacker movie look.",
+                tag: "CLASSIC",
+                _cols: null, _drops: null,
+                draw: (ctx, w, h, t) => {
+                    const fontSize = 14;
+                    const cols = Math.floor(w / fontSize);
+
+                    if (!this._matrixDrops || this._matrixDrops.length !== cols) {
+                        this._matrixDrops = Array.from({ length: cols }, () => Math.random() * h / fontSize);
+                    }
+
+                    // Fade
+                    ctx.fillStyle = 'rgba(5,5,10,0.06)';
+                    ctx.fillRect(0, 0, w, h);
+
+                    ctx.fillStyle = '#00e87b';
+                    ctx.font = fontSize + 'px JetBrains Mono, monospace';
+
+                    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%^&*{}[]|;:<>?/~`ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ';
+
+                    if (Math.floor(t) % 2 === 0) {
+                        for (let i = 0; i < cols; i++) {
+                            const ch = chars[Math.floor(Math.random() * chars.length)];
+                            const x = i * fontSize;
+                            const y = this._matrixDrops[i] * fontSize;
+
+                            // Bright head
+                            ctx.fillStyle = `rgba(0,255,136,${0.8 + Math.random() * 0.2})`;
+                            ctx.fillText(ch, x, y);
+
+                            // Dimmer trail
+                            if (Math.random() > 0.5) {
+                                ctx.fillStyle = `rgba(0,180,100,0.3)`;
+                                const ch2 = chars[Math.floor(Math.random() * chars.length)];
+                                ctx.fillText(ch2, x, y - fontSize);
+                            }
+
+                            if (y > h && Math.random() > 0.975) {
+                                this._matrixDrops[i] = 0;
+                            }
+                            this._matrixDrops[i] += 0.5 + Math.random() * 0.5;
+                        }
+                    }
+                }
+            },
+
+            // ─── 4. NEURAL NETWORK ───
+            {
+                name: "Neural Network",
+                desc: "Pulsing nodes connected by data streams. AI/tech vibe.",
+                tag: "AI/TECH",
+                draw: (ctx, w, h, t) => {
+                    ctx.fillStyle = '#06060c';
+                    ctx.fillRect(0, 0, w, h);
+
+                    // Generate stable node positions
+                    const nodeCount = 40;
+                    const nodes = [];
+                    for (let i = 0; i < nodeCount; i++) {
+                        const seed1 = Math.sin(i * 127.1) * 43758.5453;
+                        const seed2 = Math.sin(i * 269.5) * 18642.2314;
+                        nodes.push({
+                            x: (seed1 - Math.floor(seed1)) * w,
+                            y: (seed2 - Math.floor(seed2)) * h,
+                            pulse: Math.sin(t * 0.003 + i * 0.5) * 0.5 + 0.5,
+                            size: 2 + (seed1 % 3),
+                        });
+                    }
+
+                    // Connections
+                    for (let i = 0; i < nodes.length; i++) {
+                        for (let j = i + 1; j < nodes.length; j++) {
+                            const dx = nodes[i].x - nodes[j].x;
+                            const dy = nodes[i].y - nodes[j].y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist < 180) {
+                                const alpha = (1 - dist / 180) * 0.15;
+                                const pulse = (nodes[i].pulse + nodes[j].pulse) * 0.5;
+                                ctx.strokeStyle = `rgba(0,232,123,${alpha * pulse})`;
+                                ctx.lineWidth = 0.5;
+                                ctx.beginPath();
+                                ctx.moveTo(nodes[i].x, nodes[i].y);
+                                ctx.lineTo(nodes[j].x, nodes[j].y);
+                                ctx.stroke();
+
+                                // Data packet traveling along connection
+                                const pct = (Math.sin(t * 0.002 + i + j) * 0.5 + 0.5);
+                                const px = nodes[i].x + (nodes[j].x - nodes[i].x) * pct;
+                                const py = nodes[i].y + (nodes[j].y - nodes[i].y) * pct;
+                                if (dist < 120) {
+                                    ctx.fillStyle = `rgba(0,232,123,${alpha * 2})`;
+                                    ctx.fillRect(px - 1, py - 1, 2, 2);
+                                }
+                            }
+                        }
+                    }
+
+                    // Nodes
+                    for (const n of nodes) {
+                        const r = n.size * (0.8 + n.pulse * 0.4);
+                        const ng = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 4);
+                        ng.addColorStop(0, `rgba(0,232,123,${0.3 * n.pulse})`);
+                        ng.addColorStop(1, 'transparent');
+                        ctx.fillStyle = ng;
+                        ctx.fillRect(n.x - r * 4, n.y - r * 4, r * 8, r * 8);
+
+                        ctx.fillStyle = `rgba(0,232,123,${0.4 + n.pulse * 0.4})`;
+                        ctx.beginPath();
+                        ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            },
+
+            // ─── 5. DEEP SPACE ───
+            {
+                name: "Deep Space",
+                desc: "Starfield warp speed with nebula clouds. Sci-fi immersion.",
+                tag: "SCI-FI",
+                draw: (ctx, w, h, t) => {
+                    ctx.fillStyle = 'rgba(3,3,8,0.15)';
+                    ctx.fillRect(0, 0, w, h);
+
+                    const cx = w * 0.5, cy = h * 0.5;
+                    const speed = t * 0.002;
+
+                    // Stars
+                    for (let i = 0; i < 120; i++) {
+                        const seed = Math.sin(i * 191.1) * 43758.5453;
+                        const angle = (seed - Math.floor(seed)) * Math.PI * 2;
+                        const baseDist = ((i * 17.3 + speed * 50) % (w * 0.7));
+                        const dist = baseDist;
+                        const x = cx + Math.cos(angle) * dist;
+                        const y = cy + Math.sin(angle) * dist;
+                        const size = 0.5 + (dist / (w * 0.7)) * 2.5;
+                        const alpha = (dist / (w * 0.7)) * 0.8;
+
+                        // Star trail
+                        const trailLen = size * 3;
+                        ctx.strokeStyle = `rgba(200,220,255,${alpha * 0.3})`;
+                        ctx.lineWidth = size * 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x - Math.cos(angle) * trailLen, y - Math.sin(angle) * trailLen);
+                        ctx.stroke();
+
+                        ctx.fillStyle = `rgba(220,230,255,${alpha})`;
+                        ctx.beginPath();
+                        ctx.arc(x, y, size, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // Nebula
+                    for (let i = 0; i < 3; i++) {
+                        const nx = w * (0.3 + i * 0.2) + Math.sin(t * 0.0003 + i) * 40;
+                        const ny = h * (0.3 + i * 0.15) + Math.cos(t * 0.0004 + i) * 30;
+                        const ng = ctx.createRadialGradient(nx, ny, 0, nx, ny, 150);
+                        const colors = [
+                            [100, 0, 200], [0, 100, 232], [200, 0, 100]
+                        ];
+                        const c = colors[i];
+                        ng.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},0.03)`);
+                        ng.addColorStop(1, 'transparent');
+                        ctx.fillStyle = ng;
+                        ctx.fillRect(nx - 150, ny - 150, 300, 300);
+                    }
+
+                    // Center glow
+                    const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 30);
+                    cg.addColorStop(0, 'rgba(200,220,255,0.05)');
+                    cg.addColorStop(1, 'transparent');
+                    ctx.fillStyle = cg;
+                    ctx.fillRect(cx - 30, cy - 30, 60, 60);
+                }
+            },
+
+            // ─── 6. CIRCUIT BOARD ───
+            {
+                name: "Circuit Board",
+                desc: "PCB traces with pulsing data signals. Hardware hacker theme.",
+                tag: "HARDWARE",
+                draw: (ctx, w, h, t) => {
+                    ctx.fillStyle = '#050808';
+                    ctx.fillRect(0, 0, w, h);
+
+                    // PCB traces
+                    const gridSize = 40;
+                    const cols = Math.ceil(w / gridSize);
+                    const rows = Math.ceil(h / gridSize);
+
+                    for (let i = 0; i < cols; i++) {
+                        for (let j = 0; j < rows; j++) {
+                            const seed = Math.sin(i * 127.1 + j * 311.7) * 43758.5453;
+                            const val = seed - Math.floor(seed);
+
+                            if (val > 0.6) {
+                                const x = i * gridSize;
+                                const y = j * gridSize;
+
+                                ctx.strokeStyle = `rgba(0,232,123,0.08)`;
+                                ctx.lineWidth = 1;
+
+                                // Horizontal or vertical trace
+                                if (val > 0.8) {
+                                    ctx.beginPath();
+                                    ctx.moveTo(x, y + gridSize * 0.5);
+                                    ctx.lineTo(x + gridSize, y + gridSize * 0.5);
+                                    ctx.stroke();
+                                } else {
+                                    ctx.beginPath();
+                                    ctx.moveTo(x + gridSize * 0.5, y);
+                                    ctx.lineTo(x + gridSize * 0.5, y + gridSize);
+                                    ctx.stroke();
+                                }
+
+                                // Junction dot
+                                if (val > 0.85) {
+                                    const pulse = Math.sin(t * 0.003 + i + j) * 0.5 + 0.5;
+                                    ctx.fillStyle = `rgba(0,232,123,${0.15 + pulse * 0.2})`;
+                                    ctx.beginPath();
+                                    ctx.arc(x + gridSize * 0.5, y + gridSize * 0.5, 2 + pulse, 0, Math.PI * 2);
+                                    ctx.fill();
+                                }
+                            }
+                        }
+                    }
+
+                    // Traveling data pulses
+                    for (let i = 0; i < 15; i++) {
+                        const seed = Math.sin(i * 83.3) * 43758.5453;
+                        const isHoriz = i % 2 === 0;
+                        const track = Math.floor((seed - Math.floor(seed)) * (isHoriz ? rows : cols));
+                        const pos = ((t * 0.05 * (0.5 + seed % 1) + i * 200) % (isHoriz ? w : h));
+
+                        const px = isHoriz ? pos : track * gridSize + gridSize * 0.5;
+                        const py = isHoriz ? track * gridSize + gridSize * 0.5 : pos;
+
+                        const pg = ctx.createRadialGradient(px, py, 0, px, py, 20);
+                        pg.addColorStop(0, 'rgba(0,232,123,0.4)');
+                        pg.addColorStop(1, 'transparent');
+                        ctx.fillStyle = pg;
+                        ctx.fillRect(px - 20, py - 20, 40, 40);
+
+                        ctx.fillStyle = 'rgba(0,232,123,0.8)';
+                        ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
+                    }
+
+                    // IC chips
+                    for (let i = 0; i < 4; i++) {
+                        const seed = Math.sin(i * 451.7) * 43758.5453;
+                        const cx = ((seed - Math.floor(seed)) * 0.6 + 0.2) * w;
+                        const cy = ((Math.sin(i * 782.3) * 43758.5453 % 1) * 0.6 + 0.2) * h;
+                        const pulse = Math.sin(t * 0.002 + i) * 0.5 + 0.5;
+
+                        ctx.strokeStyle = `rgba(0,232,123,${0.1 + pulse * 0.05})`;
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(cx - 15, cy - 10, 30, 20);
+
+                        // Pin markings
+                        for (let p = 0; p < 3; p++) {
+                            ctx.fillStyle = `rgba(0,232,123,${0.15 + pulse * 0.1})`;
+                            ctx.fillRect(cx - 12 + p * 10, cy - 8, 4, 2);
+                            ctx.fillRect(cx - 12 + p * 10, cy + 6, 4, 2);
+                        }
+                    }
+                }
+            },
+
+            // ─── 7. RADAR / SONAR ───
+            {
+                name: "Radar Sweep",
+                desc: "Military-style radar with sweep line and blips. Tactical ops feel.",
+                tag: "TACTICAL",
+                draw: (ctx, w, h, t) => {
+                    ctx.fillStyle = 'rgba(3,8,5,0.08)';
+                    ctx.fillRect(0, 0, w, h);
+
+                    const cx = w * 0.5, cy = h * 0.5;
+                    const maxR = Math.min(w, h) * 0.4;
+
+                    // Range rings
+                    for (let i = 1; i <= 5; i++) {
+                        const r = maxR * (i / 5);
+                        ctx.strokeStyle = `rgba(0,232,123,${0.06 + (i === 5 ? 0.04 : 0)})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+
+                    // Cross hairs
+                    ctx.strokeStyle = 'rgba(0,232,123,0.06)';
+                    ctx.beginPath();
+                    ctx.moveTo(cx - maxR, cy); ctx.lineTo(cx + maxR, cy);
+                    ctx.moveTo(cx, cy - maxR); ctx.lineTo(cx, cy + maxR);
+                    ctx.stroke();
+
+                    // Sweep line
+                    const angle = (t * 0.002) % (Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(0,232,123,0.5)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy);
+                    ctx.lineTo(cx + Math.cos(angle) * maxR, cy + Math.sin(angle) * maxR);
+                    ctx.stroke();
+
+                    // Sweep trail (fade)
+                    for (let i = 1; i < 30; i++) {
+                        const a = angle - i * 0.03;
+                        const alpha = (1 - i / 30) * 0.08;
+                        ctx.strokeStyle = `rgba(0,232,123,${alpha})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(cx, cy);
+                        ctx.lineTo(cx + Math.cos(a) * maxR, cy + Math.sin(a) * maxR);
+                        ctx.stroke();
+                    }
+
+                    // Blips
+                    for (let i = 0; i < 12; i++) {
+                        const seed = Math.sin(i * 127.1) * 43758.5453;
+                        const ba = (seed - Math.floor(seed)) * Math.PI * 2;
+                        const bd = (Math.sin(i * 311.7) * 43758.5453 % 1) * maxR * 0.85 + maxR * 0.1;
+                        const bx = cx + Math.cos(ba) * bd;
+                        const by = cy + Math.sin(ba) * bd;
+
+                        // Only show blip when sweep passes it
+                        let angleDiff = angle - ba;
+                        while (angleDiff < 0) angleDiff += Math.PI * 2;
+                        if (angleDiff < 0.5) {
+                            const bright = 1 - angleDiff / 0.5;
+                            ctx.fillStyle = `rgba(0,232,123,${bright * 0.7})`;
+                            ctx.beginPath();
+                            ctx.arc(bx, by, 3, 0, Math.PI * 2);
+                            ctx.fill();
+
+                            const bg = ctx.createRadialGradient(bx, by, 0, bx, by, 12);
+                            bg.addColorStop(0, `rgba(0,232,123,${bright * 0.3})`);
+                            bg.addColorStop(1, 'transparent');
+                            ctx.fillStyle = bg;
+                            ctx.fillRect(bx - 12, by - 12, 24, 24);
+                        }
+                    }
+
+                    // Center dot
+                    ctx.fillStyle = 'rgba(0,232,123,0.6)';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            },
+
+            // ─── 8. HEXAGON GRID ───
+            {
+                name: "Hex Grid",
+                desc: "Honeycomb pattern with reactive cells. Futuristic data visualization.",
+                tag: "FUTURISTIC",
+                draw: (ctx, w, h, t) => {
+                    ctx.fillStyle = '#060610';
+                    ctx.fillRect(0, 0, w, h);
+
+                    const hexSize = 30;
+                    const hexH = hexSize * Math.sqrt(3);
+                    const cols = Math.ceil(w / (hexSize * 1.5)) + 1;
+                    const rows = Math.ceil(h / hexH) + 1;
+
+                    for (let i = 0; i < cols; i++) {
+                        for (let j = 0; j < rows; j++) {
+                            const cx = i * hexSize * 1.5;
+                            const cy = j * hexH + (i % 2 ? hexH * 0.5 : 0);
+
+                            const seed = Math.sin(i * 127.1 + j * 311.7) * 43758.5453;
+                            const val = seed - Math.floor(seed);
+
+                            // Wave effect
+                            const dist = Math.sqrt((cx - w * 0.5) ** 2 + (cy - h * 0.5) ** 2);
+                            const wave = Math.sin(dist * 0.01 - t * 0.003) * 0.5 + 0.5;
+                            const pulse = Math.sin(t * 0.002 + val * 10) * 0.5 + 0.5;
+
+                            const alpha = (val > 0.7 ? 0.15 + pulse * 0.1 : 0.03 + wave * 0.03);
+
+                            // Draw hex
+                            ctx.strokeStyle = `rgba(0,232,123,${alpha})`;
+                            ctx.lineWidth = 0.5;
+                            ctx.beginPath();
+                            for (let k = 0; k < 6; k++) {
+                                const a = Math.PI / 3 * k - Math.PI / 6;
+                                const hx = cx + hexSize * 0.9 * Math.cos(a);
+                                const hy = cy + hexSize * 0.9 * Math.sin(a);
+                                k === 0 ? ctx.moveTo(hx, hy) : ctx.lineTo(hx, hy);
+                            }
+                            ctx.closePath();
+                            ctx.stroke();
+
+                            // Fill active cells
+                            if (val > 0.85) {
+                                ctx.fillStyle = `rgba(0,232,123,${0.02 + pulse * 0.04})`;
+                                ctx.fill();
+                            }
+                        }
+                    }
+                }
+            }
+
+        ];
+
+        // ============================================================
+        // RENDERING
+        // ============================================================
+
+        // Matrix rain needs persistent state
+        window._matrixDrops = null;
+
+        const grid = document.getElementById('grid');
+        const cardCanvases = [];
+
+        ANIMATIONS.forEach((anim, idx) => {
+            const card = document.createElement('div');
+            card.className = 'card' + (idx === 0 ? ' active' : '');
+            card.innerHTML = `
+        <div class="card-preview"><canvas id="c${idx}"></canvas></div>
+        <div class="card-info">
+            <h3>${anim.name}</h3>
+            <p>${anim.desc}</p>
+            <span class="tag ${anim.tagClass || ''}">${anim.tag}</span>
+        </div>
+    `;
+            card.onclick = () => openFullscreen(idx);
+            grid.appendChild(card);
+
+            const canvas = document.getElementById('c' + idx);
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width || 400;
+            canvas.height = rect.height || 280;
+            cardCanvases.push({ canvas, ctx: canvas.getContext('2d'), anim });
+        });
+
+        // Animate all cards
+        let lastTime = 0;
+        function animateCards(timestamp) {
+            if (timestamp - lastTime > 33) { // ~30fps for cards
+                lastTime = timestamp;
+                cardCanvases.forEach(({ canvas, ctx, anim }) => {
+                    anim.draw(ctx, canvas.width, canvas.height, timestamp);
+                });
+            }
+            requestAnimationFrame(animateCards);
+        }
+        requestAnimationFrame(animateCards);
+
+        // Fullscreen preview
+        let fullAnimIdx = -1;
+        let fullRAF = null;
+
+        function openFullscreen(idx) {
+            const fp = document.getElementById('fullPreview');
+            const fc = document.getElementById('fullCanvas');
+            fp.style.display = 'block';
+            fc.width = window.innerWidth;
+            fc.height = window.innerHeight;
+            document.getElementById('fullLabel').textContent = ANIMATIONS[idx].name + ' — ' + ANIMATIONS[idx].desc;
+            fullAnimIdx = idx;
+
+            const fctx = fc.getContext('2d');
+            fctx.clearRect(0, 0, fc.width, fc.height);
+
+            function drawFull(ts) {
+                ANIMATIONS[fullAnimIdx].draw(fctx, fc.width, fc.height, ts);
+                fullRAF = requestAnimationFrame(drawFull);
+            }
+            fullRAF = requestAnimationFrame(drawFull);
+        }
+
+        function closeFullscreen() {
+            document.getElementById('fullPreview').style.display = 'none';
+            if (fullRAF) cancelAnimationFrame(fullRAF);
+            fullAnimIdx = -1;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeFullscreen();
+        });
+
+        window.addEventListener('resize', () => {
+            const fc = document.getElementById('fullCanvas');
+            if (fc && document.getElementById('fullPreview').style.display === 'block') {
+                fc.width = window.innerWidth;
+                fc.height = window.innerHeight;
+            }
+        });
+    </script>
+</body>
+
+</html>

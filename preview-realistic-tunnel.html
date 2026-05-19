@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Dark River — Realistic Tunnel Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            cursor: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script>
+        const C = document.getElementById('c');
+        const X = C.getContext('2d');
+        let W, H, T = 0;
+
+        function resize() { W = C.width = innerWidth; H = C.height = innerHeight; }
+        addEventListener('resize', resize); resize();
+
+        // === PSEUDO RANDOM ===
+        function rng(n) { let s = Math.sin(n * 127.1 + n * n * 311.7) * 43758.5453; return s - Math.floor(s); }
+        function rng2(a, b) { let s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return s - Math.floor(s); }
+
+        // === VANISHING POINT ===
+        const vpX = () => W * 0.5;
+        const vpY = () => H * 0.30;
+
+        // === PERSPECTIVE HELPER ===
+        function zToScreen(xNorm, yNorm, z) {
+            const vx = vpX(), vy = vpY();
+            const p = Math.pow(z, 1.3);
+            const halfW = W * 0.025 + W * 0.56 * p;
+            const halfH = H * 0.02 + H * 0.50 * p;
+            return {
+                x: vx + xNorm * halfW,
+                y: vy + yNorm * halfH + (H * 0.15) * p,
+                w: halfW * 2, h: halfH * 2, p
+            };
+        }
+
+        // ===================== DRAW FUNCTIONS =====================
+
+        function drawBackground() {
+            const g = X.createLinearGradient(0, 0, 0, H);
+            g.addColorStop(0, '#020203');
+            g.addColorStop(0.3, '#040406');
+            g.addColorStop(1, '#010102');
+            X.fillStyle = g;
+            X.fillRect(0, 0, W, H);
+        }
+
+        // === STONE BRICK WALLS ===
+        function drawWalls() {
+            const vx = vpX(), vy = vpY();
+            const N = 100;
+
+            for (let i = 0; i < N; i++) {
+                const z = i / N;
+                const nz = (i + 1) / N;
+                const s = zToScreen(0, 0, z);
+                const ns = zToScreen(0, 0, nz);
+
+                // Wall brightness — closer = brighter (torch lit)
+                const base = 8 + z * 18;
+                const torchInfluence = 0;
+
+                // LEFT WALL
+                const lx1 = vx - s.w * 0.5;
+                const lx2 = vx - ns.w * 0.5;
+                const wallTop1 = s.y - s.h * 0.55;
+                const wallTop2 = ns.y - ns.h * 0.55;
+                const wallBot1 = s.y + s.h * 0.05;
+                const wallBot2 = ns.y + ns.h * 0.05;
+
+                // Dark stone base color
+                const r = Math.floor(base + 5 + rng2(i, 0) * 4);
+                const g = Math.floor(base + 2 + rng2(i, 1) * 3);
+                const b = Math.floor(base + rng2(i, 2) * 3);
+                X.fillStyle = `rgb(${r},${g},${b})`;
+                X.beginPath();
+                X.moveTo(lx1, wallTop1); X.lineTo(lx2, wallTop2);
+                X.lineTo(lx2, wallBot2); X.lineTo(lx1, wallBot1);
+                X.closePath(); X.fill();
+
+                // RIGHT WALL
+                const rx1 = vx + s.w * 0.5;
+                const rx2 = vx + ns.w * 0.5;
+                X.fillStyle = `rgb(${r - 1},${g - 1},${b})`;
+                X.beginPath();
+                X.moveTo(rx1, wallTop1); X.lineTo(rx2, wallTop2);
+                X.lineTo(rx2, wallBot2); X.lineTo(rx1, wallBot1);
+                X.closePath(); X.fill();
+
+                // CEILING
+                if (z > 0.03) {
+                    const cr = Math.floor(base * 0.6);
+                    X.fillStyle = `rgb(${cr + 2},${cr},${cr})`;
+                    X.beginPath();
+                    X.moveTo(lx1 - s.w * 0.04, wallTop1);
+                    X.lineTo(lx2 - ns.w * 0.04, wallTop2);
+                    X.lineTo(rx2 + ns.w * 0.04, wallTop2);
+                    X.lineTo(rx1 + s.w * 0.04, wallTop1);
+                    X.closePath(); X.fill();
+                }
+
+                // BRICK LINES (horizontal mortar)
+                if (i % 3 === 0 && z > 0.08) {
+                    X.strokeStyle = `rgba(0,0,0,${0.2 + z * 0.15})`;
+                    X.lineWidth = 0.3 + z * 1.2;
+                    // Left
+                    X.beginPath();
+                    X.moveTo(lx1, wallBot1 - s.h * 0.15);
+                    X.lineTo(lx1, wallTop1 + s.h * 0.05);
+                    X.stroke();
+                    // Right
+                    X.beginPath();
+                    X.moveTo(rx1, wallBot1 - s.h * 0.15);
+                    X.lineTo(rx1, wallTop1 + s.h * 0.05);
+                    X.stroke();
+
+                    // Horizontal mortar on left wall
+                    const mortarY = wallTop1 + (wallBot1 - wallTop1) * 0.3;
+                    X.beginPath();
+                    X.moveTo(lx1, mortarY);
+                    X.lineTo(lx1 - s.w * 0.06, mortarY);
+                    X.stroke();
+                    // Right
+                    X.beginPath();
+                    X.moveTo(rx1, mortarY);
+                    X.lineTo(rx1 + s.w * 0.06, mortarY);
+                    X.stroke();
+                }
+
+                // VERTICAL BRICK DIVISIONS
+                if (i % 5 === 0 && z > 0.12) {
+                    X.strokeStyle = `rgba(0,0,0,${0.1 + z * 0.1})`;
+                    X.lineWidth = 0.3 + z * 0.8;
+                    for (let v = 1; v <= 3; v++) {
+                        const vy1 = wallTop1 + (wallBot1 - wallTop1) * (v / 4);
+                        // Left
+                        X.beginPath();
+                        X.moveTo(lx1, vy1);
+                        X.lineTo(lx1 - s.w * 0.04, vy1);
+                        X.stroke();
+                        // Right
+                        X.beginPath();
+                        X.moveTo(rx1, vy1);
+                        X.lineTo(rx1 + s.w * 0.04, vy1);
+                        X.stroke();
+                    }
+                }
+
+                // MOSS on lower walls
+                if (i % 7 === 0 && z > 0.2) {
+                    const mossAlpha = 0.03 + z * 0.04;
+                    const mossY = wallBot1 - s.h * 0.05;
+                    // Left moss
+                    X.fillStyle = `rgba(15,40,10,${mossAlpha})`;
+                    X.fillRect(lx1 - s.w * 0.03, mossY, s.w * 0.04, s.h * 0.06);
+                    // Right moss
+                    X.fillRect(rx1, mossY, s.w * 0.04, s.h * 0.06);
+                }
+            }
+        }
+
+        // === CHAINS ON WALLS ===
+        function drawChains() {
+            const chainPositions = [0.25, 0.50, 0.75];
+            chainPositions.forEach((cz, ci) => {
+                [-1, 1].forEach(side => {
+                    const s = zToScreen(side, 0, cz);
+                    const wallX = s.x + side * s.w * 0.03;
+                    const chainTop = s.y - s.h * 0.35;
+                    const chainLen = s.h * 0.2;
+                    const linkSize = 2 + cz * 4;
+
+                    // Chain links
+                    X.strokeStyle = `rgba(70,65,55,${0.2 + cz * 0.3})`;
+                    X.lineWidth = 0.5 + cz;
+                    for (let l = 0; l < 5; l++) {
+                        const ly = chainTop + l * linkSize * 2;
+                        const sway = Math.sin(T * 0.001 + ci + l) * cz * 2;
+                        X.beginPath();
+                        X.ellipse(wallX + sway, ly, linkSize * 0.4, linkSize, 0, 0, Math.PI * 2);
+                        X.stroke();
+                    }
+                });
+            });
+        }
+
+        // === SKULLS ON WALLS ===
+        function drawSkulls() {
+            const skullPos = [{ z: 0.35, side: -1, yOff: -0.2 }, { z: 0.65, side: 1, yOff: -0.25 }, { z: 0.85, side: -1, yOff: -0.15 }];
+            skullPos.forEach(sp => {
+                const s = zToScreen(sp.side, 0, sp.z);
+                const sx = s.x + sp.side * s.w * 0.02;
+                const sy = s.y + s.h * sp.yOff;
+                const size = 2 + sp.z * 6;
+                const alpha = 0.15 + sp.z * 0.25;
+
+                // Skull shape
+                X.fillStyle = `rgba(140,130,110,${alpha})`;
+                X.beginPath();
+                X.arc(sx, sy, size, 0, Math.PI * 2);
+                X.fill();
+                // Jaw
+                X.fillRect(sx - size * 0.6, sy + size * 0.5, size * 1.2, size * 0.5);
+
+                // Eye sockets (dark)
+                X.fillStyle = `rgba(5,0,0,${alpha + 0.1})`;
+                X.beginPath();
+                X.arc(sx - size * 0.3, sy - size * 0.1, size * 0.25, 0, Math.PI * 2);
+                X.arc(sx + size * 0.3, sy - size * 0.1, size * 0.25, 0, Math.PI * 2);
+                X.fill();
+
+                // Faint glow in eye sockets
+                X.fillStyle = `rgba(180,0,0,${0.03 + Math.sin(T * 0.002 + sp.z * 10) * 0.02})`;
+                X.beginPath();
+                X.arc(sx - size * 0.3, sy - size * 0.1, size * 0.15, 0, Math.PI * 2);
+                X.arc(sx + size * 0.3, sy - size * 0.1, size * 0.15, 0, Math.PI * 2);
+                X.fill();
+            });
+        }
+
+        // === STALACTITES FROM CEILING ===
+        function drawStalactites() {
+            for (let i = 0; i < 15; i++) {
+                const sz = 0.1 + rng(i + 100) * 0.85;
+                const s = zToScreen(0, 0, sz);
+                const sx = vpX() + (rng(i + 200) - 0.5) * s.w * 0.8;
+                const sy = s.y - s.h * 0.52;
+                const len = (3 + rng(i + 300) * 15) * sz;
+                const thick = (0.5 + rng(i + 400) * 2) * sz;
+                const alpha = 0.1 + sz * 0.25;
+
+                // Stalactite
+                X.fillStyle = `rgba(30,28,22,${alpha})`;
+                X.beginPath();
+                X.moveTo(sx - thick, sy);
+                X.lineTo(sx, sy + len);
+                X.lineTo(sx + thick, sy);
+                X.closePath();
+                X.fill();
+
+                // Drip
+                if (rng(i + 500) > 0.6) {
+                    const dripY = sy + len + ((T * 0.03 + i * 500) % 40);
+                    if (dripY < s.y + s.h * 0.1) {
+                        X.fillStyle = `rgba(60,120,140,${0.15 * sz})`;
+                        X.beginPath();
+                        X.ellipse(sx, dripY, 0.5 + sz, 1.5 + sz, 0, 0, Math.PI * 2);
+                        X.fill();
+                    }
+                }
+            }
+        }
+
+        // === GATE / ARCHWAY AT END ===
+        function drawGate() {
+            const vx = vpX(), vy = vpY();
+            const gw = W * 0.055;
+            const gh = H * 0.12;
+            const gy = vy + gh * 0.2;
+
+            // Eerie glow from beyond
+            const glow = X.createRadialGradient(vx, gy - gh * 0.15, 0, vx, gy - gh * 0.15, gw * 2.5);
+            const pulse = 0.04 + Math.sin(T * 0.0008) * 0.015;
+            glow.addColorStop(0, `rgba(0,150,90,${pulse})`);
+            glow.addColorStop(0.3, `rgba(0,80,50,${pulse * 0.5})`);
+            glow.addColorStop(1, 'transparent');
+            X.fillStyle = glow;
+            X.fillRect(vx - gw * 2.5, gy - gh * 1.5, gw * 5, gh * 3);
+
+            // Gate frame — heavy stone
+            const pw = gw * 0.18;
+            X.fillStyle = '#0f0d0a';
+            // Left pillar
+            X.fillRect(vx - gw * 0.5, gy - gh * 0.9, pw, gh * 1.3);
+            // Right pillar
+            X.fillRect(vx + gw * 0.5 - pw, gy - gh * 0.9, pw, gh * 1.3);
+
+            // Arch
+            X.strokeStyle = '#0f0d0a';
+            X.lineWidth = pw;
+            X.beginPath();
+            X.arc(vx, gy - gh * 0.8, gw * 0.5 - pw * 0.3, Math.PI, 0);
+            X.stroke();
+
+            // Darkness inside gate
+            X.fillStyle = '#010102';
+            X.beginPath();
+            X.arc(vx, gy - gh * 0.78, gw * 0.32, Math.PI, 0);
+            X.lineTo(vx + gw * 0.32, gy + gh * 0.4);
+            X.lineTo(vx - gw * 0.32, gy + gh * 0.4);
+            X.closePath();
+            X.fill();
+
+            // Iron bars
+            X.strokeStyle = 'rgba(50,45,35,0.35)';
+            X.lineWidth = 0.8;
+            for (let b = -3; b <= 3; b++) {
+                const bx = vx + b * gw * 0.07;
+                X.beginPath();
+                X.moveTo(bx, gy - gh * 0.75 - Math.abs(b) * 2);
+                X.lineTo(bx, gy + gh * 0.4);
+                X.stroke();
+            }
+            // Cross bar
+            X.beginPath();
+            X.moveTo(vx - gw * 0.3, gy - gh * 0.3);
+            X.lineTo(vx + gw * 0.3, gy - gh * 0.3);
+            X.stroke();
+
+            // Skull above gate
+            const skY = gy - gh * 1.05;
+            X.fillStyle = `rgba(90,80,65,${0.2 + Math.sin(T * 0.001) * 0.05})`;
+            X.beginPath();
+            X.arc(vx, skY, 3.5, 0, Math.PI * 2);
+            X.fill();
+            X.fillStyle = `rgba(0,200,100,${0.08 + Math.sin(T * 0.002) * 0.04})`;
+            X.fillRect(vx - 2, skY - 1, 1.2, 1.2);
+            X.fillRect(vx + 0.8, skY - 1, 1.2, 1.2);
+        }
+
+        // === DARK WATER WITH REFLECTIONS ===
+        function drawWater() {
+            const vx = vpX(), vy = vpY();
+            const layers = 80;
+
+            for (let i = 0; i < layers; i++) {
+                const z = 0.03 + 0.97 * (i / layers);
+                const nz = 0.03 + 0.97 * ((i + 1) / layers);
+                const s = zToScreen(0, 0, z);
+                const ns = zToScreen(0, 0, nz);
+
+                const ww = s.w * 0.38;
+                const nww = ns.w * 0.38;
+                const wy = s.y + s.h * 0.05;
+                const nwy = ns.y + ns.h * 0.05;
+
+                // Water base — very dark with subtle color
+                const depth = z;
+                const waveShift = Math.sin(T * 0.001 + i * 0.4) * 3 * z;
+                const wr = Math.floor(1 + depth * 6);
+                const wg = Math.floor(5 + depth * 18 + Math.sin(T * 0.0012 + i * 0.3) * 3 * depth);
+                const wb = Math.floor(10 + depth * 25);
+                const wa = depth * 0.8;
+
+                X.fillStyle = `rgba(${wr},${wg},${wb},${wa})`;
+                X.beginPath();
+                X.moveTo(vx - ww + waveShift, wy);
+                X.lineTo(vx - nww + waveShift * 0.8, nwy);
+                X.lineTo(vx + nww + waveShift * 0.8, nwy);
+                X.lineTo(vx + ww + waveShift, wy);
+                X.closePath();
+                X.fill();
+
+                // Ripples
+                if (i % 6 === 0 && z > 0.15) {
+                    const ripX = vx + Math.sin(T * 0.0015 + i * 1.2) * ww * 0.3 + waveShift;
+                    const ripW = ww * (0.1 + z * 0.2);
+                    const ripAlpha = 0.02 + z * 0.04;
+                    X.strokeStyle = `rgba(30,90,110,${ripAlpha})`;
+                    X.lineWidth = 0.3 + z;
+                    X.beginPath();
+                    X.ellipse(ripX, wy, ripW, 1 + z * 2, 0, 0, Math.PI * 2);
+                    X.stroke();
+                }
+
+                // Torch reflections on water
+                if (i % 10 === 0 && z > 0.15) {
+                    const refFlicker = 0.01 + Math.sin(T * 0.005 + i) * 0.01;
+                    const rg = X.createRadialGradient(vx + waveShift, wy, 0, vx + waveShift, wy, ww * 0.4);
+                    rg.addColorStop(0, `rgba(200,100,20,${refFlicker * z})`);
+                    rg.addColorStop(1, 'transparent');
+                    X.fillStyle = rg;
+                    X.fillRect(vx - ww * 0.4, wy - 3, ww * 0.8, 6);
+                }
+            }
+        }
+
+        // === TORCHES (MASHAL) ===
+        function drawTorches() {
+            const torchZ = [0.15, 0.28, 0.42, 0.57, 0.72, 0.88];
+
+            torchZ.forEach((tz, ti) => {
+                [-1, 1].forEach(side => {
+                    const s = zToScreen(side, 0, tz);
+                    const wallX = s.x + side * s.w * 0.02;
+                    const torchY = s.y - s.h * 0.25;
+                    const scale = tz;
+
+                    // Torch bracket
+                    X.strokeStyle = `rgba(60,50,35,${0.2 + tz * 0.4})`;
+                    X.lineWidth = 0.8 + tz * 2;
+                    X.beginPath();
+                    X.moveTo(wallX, torchY + 4 * scale);
+                    X.lineTo(wallX + side * (-6 * scale), torchY);
+                    X.stroke();
+
+                    // Torch handle
+                    const thX = wallX + side * (-6 * scale);
+                    X.fillStyle = `rgba(50,35,20,${0.3 + tz * 0.3})`;
+                    X.fillRect(thX - 1 * scale, torchY - 2 * scale, 2 * scale, 8 * scale);
+
+                    // === FIRE ===
+                    const f1 = Math.sin(T * 0.012 + ti * 4 + side) * 0.3;
+                    const f2 = Math.cos(T * 0.018 + ti * 6 + side * 3) * 0.2;
+                    const f3 = Math.sin(T * 0.025 + ti * 2) * 0.15;
+                    const intensity = 0.55 + f1 + f2 + f3;
+                    const fireR = (5 + tz * 25) * intensity;
+                    const fireX = thX + (f1 + f2) * 2 * scale;
+                    const fireY = torchY - 4 * scale;
+
+                    // Outer warm glow (illuminates walls)
+                    const wallGlow = X.createRadialGradient(fireX, fireY, 0, fireX, fireY, fireR * 5);
+                    wallGlow.addColorStop(0, `rgba(255,120,20,${0.025 * tz * intensity})`);
+                    wallGlow.addColorStop(0.3, `rgba(200,60,10,${0.012 * tz * intensity})`);
+                    wallGlow.addColorStop(1, 'transparent');
+                    X.fillStyle = wallGlow;
+                    X.fillRect(fireX - fireR * 5, fireY - fireR * 5, fireR * 10, fireR * 10);
+
+                    // Mid glow
+                    const midGlow = X.createRadialGradient(fireX, fireY, 0, fireX, fireY, fireR * 2);
+                    midGlow.addColorStop(0, `rgba(255,180,50,${0.15 * tz * intensity})`);
+                    midGlow.addColorStop(0.5, `rgba(255,100,15,${0.06 * tz * intensity})`);
+                    midGlow.addColorStop(1, 'transparent');
+                    X.fillStyle = midGlow;
+                    X.fillRect(fireX - fireR * 2, fireY - fireR * 2, fireR * 4, fireR * 4);
+
+                    // Inner fire (bright core)
+                    const innerGlow = X.createRadialGradient(fireX, fireY - fireR * 0.2, 0, fireX, fireY, fireR);
+                    innerGlow.addColorStop(0, `rgba(255,240,120,${0.35 * tz * intensity})`);
+                    innerGlow.addColorStop(0.2, `rgba(255,200,60,${0.25 * tz * intensity})`);
+                    innerGlow.addColorStop(0.5, `rgba(255,120,15,${0.12 * tz * intensity})`);
+                    innerGlow.addColorStop(1, 'transparent');
+                    X.fillStyle = innerGlow;
+                    X.fillRect(fireX - fireR, fireY - fireR * 1.5, fireR * 2, fireR * 2);
+
+                    // Flame tongues
+                    for (let ft = 0; ft < 3; ft++) {
+                        const tongueH = fireR * (0.8 + Math.sin(T * 0.02 + ti * 3 + ft * 2) * 0.4);
+                        const tongueX = fireX + (Math.sin(T * 0.015 + ft * 4 + ti) * 2) * scale;
+                        const tongueAlpha = 0.08 + tz * 0.12 * intensity;
+                        X.fillStyle = `rgba(255,${180 + ft * 20},${30 + ft * 20},${tongueAlpha})`;
+                        X.beginPath();
+                        X.moveTo(tongueX - 1.5 * scale, fireY);
+                        X.lineTo(tongueX + Math.sin(T * 0.02 + ft) * scale, fireY - tongueH);
+                        X.lineTo(tongueX + 1.5 * scale, fireY);
+                        X.closePath();
+                        X.fill();
+                    }
+
+                    // Sparks from this torch
+                    for (let sp = 0; sp < 2; sp++) {
+                        const sparkAge = ((T * 0.03 + ti * 200 + sp * 500 + side * 300) % 800) / 800;
+                        if (sparkAge < 1) {
+                            const spX = fireX + Math.sin(sparkAge * 10 + ti) * 5 * scale;
+                            const spY = fireY - sparkAge * 40 * scale;
+                            const spAlpha = (1 - sparkAge) * 0.4 * tz;
+                            X.fillStyle = `rgba(255,${150 + Math.floor(sparkAge * 100)},30,${spAlpha})`;
+                            X.fillRect(spX, spY, 0.5 + scale, 0.5 + scale);
+                        }
+                    }
+                });
+            });
+        }
+
+        // === WOODEN BOAT ===
+        function drawBoat() {
+            const cx = W * 0.5;
+            const by = H * 0.87;
+            const bw = W * 0.24;
+            const bh = H * 0.07;
+
+            // Boat sway
+            const sway = Math.sin(T * 0.0008) * 2.5;
+            const roll = Math.sin(T * 0.0006) * 0.008;
+
+            X.save();
+            X.translate(cx, by + sway);
+            X.rotate(roll);
+
+            // === HULL ===
+            // Dark weathered wood gradient
+            const hullG = X.createLinearGradient(-bw * 0.45, 0, bw * 0.45, 0);
+            hullG.addColorStop(0, '#120c06');
+            hullG.addColorStop(0.3, '#1e150c');
+            hullG.addColorStop(0.5, '#221810');
+            hullG.addColorStop(0.7, '#1e150c');
+            hullG.addColorStop(1, '#120c06');
+
+            // Hull shape — first person view (bow points away from us)
+            X.fillStyle = hullG;
+            X.beginPath();
+            X.moveTo(0, -bh * 2.2); // Bow tip (going away)
+            X.bezierCurveTo(-bw * 0.08, -bh * 1.2, -bw * 0.35, -bh * 0.2, -bw * 0.45, bh * 0.3);
+            X.quadraticCurveTo(-bw * 0.46, bh * 0.8, -bw * 0.3, bh * 1);
+            X.quadraticCurveTo(0, bh * 1.3, bw * 0.3, bh * 1);
+            X.quadraticCurveTo(bw * 0.46, bh * 0.8, bw * 0.45, bh * 0.3);
+            X.bezierCurveTo(bw * 0.35, -bh * 0.2, bw * 0.08, -bh * 1.2, 0, -bh * 2.2);
+            X.closePath();
+            X.fill();
+
+            // Hull outline
+            X.strokeStyle = 'rgba(80,60,35,0.2)';
+            X.lineWidth = 1.5;
+            X.stroke();
+
+            // Planks (horizontal lines across hull)
+            X.strokeStyle = 'rgba(0,0,0,0.12)';
+            X.lineWidth = 0.6;
+            for (let p = -5; p <= 5; p++) {
+                const py = p * bh * 0.18;
+                const pw = bw * (0.15 + 0.3 * Math.abs(Math.cos(p * 0.3)));
+                X.beginPath();
+                X.moveTo(-pw, py);
+                X.lineTo(pw, py);
+                X.stroke();
+            }
+
+            // Vertical plank divisions
+            X.strokeStyle = 'rgba(0,0,0,0.08)';
+            for (let v = -3; v <= 3; v++) {
+                const vx = v * bw * 0.1;
+                X.beginPath();
+                X.moveTo(vx, -bh * 0.5);
+                X.lineTo(vx, bh * 0.8);
+                X.stroke();
+            }
+
+            // Gunwale (top edge of boat sides)
+            X.strokeStyle = 'rgba(100,75,45,0.25)';
+            X.lineWidth = 2;
+            X.beginPath();
+            X.moveTo(-bw * 0.45, bh * 0.3);
+            X.quadraticCurveTo(-bw * 0.3, -bh * 0.8, 0, -bh * 2);
+            X.stroke();
+            X.beginPath();
+            X.moveTo(bw * 0.45, bh * 0.3);
+            X.quadraticCurveTo(bw * 0.3, -bh * 0.8, 0, -bh * 2);
+            X.stroke();
+
+            // Bow ornament (metal/wood piece)
+            X.fillStyle = 'rgba(70,55,35,0.4)';
+            X.beginPath();
+            X.moveTo(0, -bh * 2.2);
+            X.lineTo(-3, -bh * 1.8);
+            X.lineTo(3, -bh * 1.8);
+            X.closePath();
+            X.fill();
+
+            // === LANTERN ON BOW ===
+            const lx = 0, ly = -bh * 2.5;
+            const lf = 0.6 + Math.sin(T * 0.014) * 0.2 + Math.sin(T * 0.021) * 0.12;
+
+            // Lantern pole
+            X.strokeStyle = 'rgba(60,45,25,0.4)';
+            X.lineWidth = 1.2;
+            X.beginPath();
+            X.moveTo(0, -bh * 2.2);
+            X.lineTo(lx, ly - 5);
+            X.stroke();
+
+            // Lantern cage
+            X.strokeStyle = 'rgba(80,65,40,0.3)';
+            X.lineWidth = 0.8;
+            X.strokeRect(lx - 3, ly - 8, 6, 7);
+
+            // Lantern flame
+            X.fillStyle = `rgba(255,200,70,${0.5 * lf})`;
+            X.fillRect(lx - 1.5, ly - 6, 3, 3);
+
+            // Lantern glow
+            const lg = X.createRadialGradient(lx, ly - 5, 0, lx, ly - 5, 40);
+            lg.addColorStop(0, `rgba(255,170,50,${0.08 * lf})`);
+            lg.addColorStop(0.5, `rgba(255,100,20,${0.03 * lf})`);
+            lg.addColorStop(1, 'transparent');
+            X.fillStyle = lg;
+            X.fillRect(lx - 40, ly - 45, 80, 80);
+
+            // === ROPE coiled on boat floor ===
+            X.strokeStyle = 'rgba(90,70,40,0.12)';
+            X.lineWidth = 1;
+            for (let r = 0; r < 3; r++) {
+                X.beginPath();
+                X.ellipse(-bw * 0.2, bh * 0.3, 6 + r * 3, 3 + r * 1.5, 0.3, 0, Math.PI * 2);
+                X.stroke();
+            }
+
+            X.restore();
+
+            // === WAKE BEHIND BOAT (our side) ===
+            for (let w = 0; w < 5; w++) {
+                const wy = by + sway + bh * 0.8 + w * 12;
+                const wSpread = 20 + w * 20;
+                const wAlpha = 0.03 - w * 0.005;
+                if (wAlpha <= 0) continue;
+                X.strokeStyle = `rgba(40,100,120,${wAlpha})`;
+                X.lineWidth = 0.5;
+                X.beginPath();
+                X.ellipse(cx, wy, wSpread, 2 + w, 0, 0, Math.PI * 2);
+                X.stroke();
+            }
+        }
+
+        // === FOG / MIST ===
+        function drawFog() {
+            // Low fog on water surface
+            for (let i = 0; i < 8; i++) {
+                const fz = 0.15 + rng(i + 50) * 0.7;
+                const s = zToScreen(0, 0, fz);
+                const fx = vpX() + Math.sin(T * 0.00025 + i * 3) * s.w * 0.3;
+                const fy = s.y + s.h * 0.02;
+                const fr = 40 + fz * 120;
+                const fa = 0.04 + Math.sin(T * 0.0004 + i * 2) * 0.015;
+
+                const fg = X.createRadialGradient(fx, fy, 0, fx, fy, fr);
+                fg.addColorStop(0, `rgba(12,18,20,${fa * fz})`);
+                fg.addColorStop(0.5, `rgba(8,14,16,${fa * fz * 0.5})`);
+                fg.addColorStop(1, 'transparent');
+                X.fillStyle = fg;
+                X.fillRect(fx - fr, fy - fr, fr * 2, fr * 2);
+            }
+
+            // Thick fog near gate
+            const gfx = vpX() + Math.sin(T * 0.0003) * 20;
+            const gfy = vpY() + H * 0.05;
+            const gfr = W * 0.15;
+            const gfa = 0.06 + Math.sin(T * 0.0006) * 0.02;
+            const gfg = X.createRadialGradient(gfx, gfy, 0, gfx, gfy, gfr);
+            gfg.addColorStop(0, `rgba(10,15,12,${gfa})`);
+            gfg.addColorStop(1, 'transparent');
+            X.fillStyle = gfg;
+            X.fillRect(gfx - gfr, gfy - gfr, gfr * 2, gfr * 2);
+        }
+
+        // === FLOATING EMBERS / SPARKS ===
+        const embers = Array.from({ length: 50 }, (_, i) => ({
+            x: rng(i + 700), y: rng(i + 800),
+            vx: (rng(i + 900) - 0.5) * 0.00015,
+            vy: -rng(i + 1000) * 0.0003 - 0.00005,
+            size: 0.4 + rng(i + 1100) * 1.5,
+            life: rng(i + 1200),
+            hue: 15 + rng(i + 1300) * 30,
+        }));
+
+        function drawEmbers() {
+            embers.forEach(e => {
+                e.x += e.vx + Math.sin(T * 0.0008 + e.life * 8) * 0.00003;
+                e.y += e.vy;
+                e.life -= 0.0008;
+                if (e.life <= 0 || e.y < 0.05) {
+                    e.x = 0.2 + rng(T + e.hue) * 0.6;
+                    e.y = 0.4 + rng(T + e.size) * 0.45;
+                    e.life = 0.7 + rng(T + e.x * 100) * 0.3;
+                }
+
+                const sx = e.x * W, sy = e.y * H;
+                const alpha = e.life * 0.45;
+
+                // Ember particle
+                X.fillStyle = `rgba(255,${100 + Math.floor(e.hue * 2)},15,${alpha})`;
+                X.fillRect(sx, sy, e.size, e.size);
+
+                // Tiny glow
+                if (e.size > 1) {
+                    const eg = X.createRadialGradient(sx, sy, 0, sx, sy, e.size * 2.5);
+                    eg.addColorStop(0, `rgba(255,${80 + Math.floor(e.hue)},0,${alpha * 0.25})`);
+                    eg.addColorStop(1, 'transparent');
+                    X.fillStyle = eg;
+                    X.fillRect(sx - e.size * 2.5, sy - e.size * 2.5, e.size * 5, e.size * 5);
+                }
+            });
+        }
+
+        // === VIGNETTE ===
+        function drawVignette() {
+            // Edge darkening
+            const v = X.createRadialGradient(W * 0.5, H * 0.45, W * 0.15, W * 0.5, H * 0.45, W * 0.7);
+            v.addColorStop(0, 'transparent');
+            v.addColorStop(0.7, 'rgba(0,0,0,0.2)');
+            v.addColorStop(1, 'rgba(0,0,0,0.6)');
+            X.fillStyle = v;
+            X.fillRect(0, 0, W, H);
+
+            // Film grain (very subtle)
+            if (Math.random() > 0.5) {
+                for (let i = 0; i < 30; i++) {
+                    const gx = Math.random() * W;
+                    const gy = Math.random() * H;
+                    X.fillStyle = `rgba(255,255,255,${Math.random() * 0.008})`;
+                    X.fillRect(gx, gy, 1, 1);
+                }
+            }
+        }
+
+        // === MAIN LOOP ===
+        function render(ts) {
+            T = ts;
+            drawBackground();
+            drawGate();
+            drawWalls();
+            drawStalactites();
+            drawChains();
+            drawSkulls();
+            drawWater();
+            drawTorches();
+            drawFog();
+            drawEmbers();
+            drawBoat();
+            drawVignette();
+            requestAnimationFrame(render);
+        }
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

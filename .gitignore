@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+builds/
+builds-*/
+build-v*/
+
+# Sensitive config (use config.example.json as template)
+config.json
+
+# Plugin source (private — not part of public electron app)
+ctf-plugin-extracted/
+ctf-manager-plugin-fixed.zip
+ctf-manager-plugin.zip
+electron-app/
+release-repo/
+
+# Dead / unused pages
+index.html
+src/lobby.html
+
+# Screenshots & misc
+# screenshot.png (temporarily tracked for reference)
+author.php
+cp_reviews/
+theme-files/
+
+# Copilot / IDE
+.codesight/
+.github/instructions/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.swp

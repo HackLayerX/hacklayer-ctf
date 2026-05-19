@@ -1,0 +1,100 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matrix Rain - Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+  canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+</style>
+</head>
+<body>
+<canvas id="matrix-canvas"></canvas>
+<script>
+(function() {
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let w, h;
+    function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+        initDrops();
+    }
+    window.addEventListener('resize', resize);
+
+    const fontSize = 14;
+    let cols, drops;
+
+    function initDrops() {
+        cols = Math.floor(w / fontSize);
+        drops = Array.from({ length: cols }, () => Math.random() * h / fontSize);
+    }
+
+    resize();
+
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%^&*{}[]|;:<>?/~`\u{FF8A}\u{FF90}\u{FF8B}\u{FF70}\u{FF73}\u{FF7C}\u{FF85}\u{FF93}\u{FF86}\u{FF7B}\u{FF9C}\u{FF82}\u{FF75}\u{FF98}\u{FF71}\u{FF8E}\u{FF83}\u{FF8F}\u{FF79}\u{FF92}\u{FF74}\u{FF76}\u{FF77}\u{FF91}\u{FF95}\u{FF97}\u{FF7E}\u{FF88}\u{FF7D}\u{FF80}\u{FF87}\u{FF8D}';
+
+    function animate() {
+        // Fade trail
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.055)';
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.font = fontSize + 'px monospace';
+
+        for (let i = 0; i < cols; i++) {
+            const ch = chars[Math.floor(Math.random() * chars.length)];
+            const x = i * fontSize;
+            const y = drops[i] * fontSize;
+
+            // Head character - medium green
+            ctx.fillStyle = 'rgba(0, 200, 100, ' + (0.55 + Math.random() * 0.2) + ')';
+            ctx.fillText(ch, x, y);
+
+            // Trail character
+            if (Math.random() > 0.45) {
+                ctx.fillStyle = 'rgba(0, 140, 75, 0.22)';
+                const ch2 = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillText(ch2, x, y - fontSize);
+            }
+
+            // Dim trail
+            if (Math.random() > 0.7) {
+                ctx.fillStyle = 'rgba(0, 90, 50, 0.1)';
+                const ch3 = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillText(ch3, x, y - fontSize * 2);
+            }
+
+            // Reset drop to top
+            if (y > h && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+            drops[i] += 0.5 + Math.random() * 0.5;
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    // Initial black fill
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
+
+    animate();
+})();
+</script>
+</body>
+</html>

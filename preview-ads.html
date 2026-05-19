@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HackLayer CTF - Lobby</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .lobby-sim {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            position: relative;
+        }
+
+        .lobby-sim::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, rgba(0, 255, 136, 0.02) 0%, transparent 60%);
+        }
+
+        .lobby-box {
+            background: rgba(15, 15, 15, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 36px 48px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            min-width: 320px;
+        }
+
+        .lobby-box h2 {
+            font-size: 17px;
+            color: #00ff88;
+            letter-spacing: 3px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .lobby-box .sub {
+            color: #555;
+            font-size: 11px;
+            margin-bottom: 24px;
+            letter-spacing: 0.5px;
+        }
+
+        .lobby-box .timer {
+            font-size: 42px;
+            font-weight: 700;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+        }
+
+        .lobby-box .timer-label {
+            color: #444;
+            font-size: 10px;
+            margin-top: 6px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .player-dots {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            max-width: 200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .player-dots .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(0, 255, 136, 0.4);
+            animation: dotPulse 2s infinite;
+        }
+
+        .player-dots .dot:nth-child(odd) {
+            animation-delay: 0.5s;
+        }
+
+        @keyframes dotPulse {
+
+            0%,
+            100% {
+                opacity: 0.4;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .player-count {
+            color: #444;
+            font-size: 10px;
+            margin-top: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .lobby-hint {
+            color: #333;
+            font-size: 10px;
+            margin-top: 14px;
+            letter-spacing: 1px;
+        }
+
+        /* ===== SPONSOR BANNER ===== */
+        #sponsorBanner {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%) translateY(100%);
+            z-index: 100;
+            max-width: 728px;
+            width: 92%;
+            text-align: center;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #sponsorBanner.visible {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        #sponsorBanner.hidden {
+            transform: translateX(-50%) translateY(100%);
+        }
+
+        .banner-inner {
+            position: relative;
+            background: rgba(8, 8, 8, 0.97);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px 10px 0 0;
+            padding: 8px 10px;
+            overflow: hidden;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .banner-inner a {
+            display: block;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .banner-inner img {
+            width: 100%;
+            height: auto;
+            max-height: 90px;
+            border-radius: 6px;
+            object-fit: contain;
+        }
+
+        .banner-close {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 16px;
+            cursor: pointer;
+            line-height: 1;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .banner-close:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .banner-label {
+            font-size: 8px;
+            color: rgba(255, 255, 255, 0.15);
+            text-align: right;
+            margin-top: 3px;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Lobby Screen (exact user view) -->
+    <div class="lobby-sim">
+        <div class="lobby-box">
+            <h2>CYBER ASSAULT</h2>
+            <div class="sub">Web Exploitation • Slot #3</div>
+            <div class="timer" id="demoTimer">01:24</div>
+            <div class="timer-label">Starting in</div>
+
+            <div class="player-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="lobby-hint">Matchmaking in progress</div>
+        </div>
+    </div>
+
+    <!-- Sponsor Banner -->
+    <div id="sponsorBanner">
+        <div class="banner-inner">
+            <a id="sponsorLink" href="https://tryhackme.com" onclick="event.preventDefault();">
+                <div id="bannerContent"></div>
+            </a>
+            <button class="banner-close" onclick="hideBanner()">×</button>
+            <div class="banner-label">Sponsored</div>
+        </div>
+    </div>
+
+    <!-- Hidden SVG banner (simulating a real sponsor image) -->
+    <div style="display:none;">
+        <svg id="svg-banner" width="728" height="90" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#0d1117" />
+                    <stop offset="100%" style="stop-color:#161b22" />
+                </linearGradient>
+            </defs>
+            <rect width="728" height="90" rx="6" fill="url(#bg1)" />
+            <rect x="0" y="0" width="728" height="90" rx="6" stroke="rgba(0,200,255,0.15)" stroke-width="1"
+                fill="none" />
+            <!-- Logo area -->
+            <circle cx="50" cy="45" r="22" fill="rgba(0,200,255,0.1)" stroke="rgba(0,200,255,0.3)" stroke-width="1" />
+            <text x="40" y="52" fill="#00d4ff" font-size="20" font-family="Arial">🛡️</text>
+            <!-- Text -->
+            <text x="85" y="32" fill="#ffffff" font-size="16" font-weight="bold"
+                font-family="Arial, sans-serif">TryHackMe</text>
+            <text x="85" y="52" fill="#8b949e" font-size="12" font-family="Arial, sans-serif">Learn Cybersecurity with
+                Hands-on Labs</text>
+            <text x="85" y="72" fill="#555d66" font-size="10" font-family="Arial, sans-serif">500+ Rooms • Beginner to
+                Advanced • Free Tier Available</text>
+            <!-- CTA Button -->
+            <rect x="560" y="27" width="140" height="36" rx="18" fill="#00d4ff" />
+            <text x="586" y="50" fill="#000000" font-size="12" font-weight="bold" font-family="Arial, sans-serif">Start
+                Free →</text>
+        </svg>
+    </div>
+
+    <script>
+        // Convert SVG to image
+        function svgToDataUrl(el) {
+            const data = new XMLSerializer().serializeToString(el);
+            return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(data)));
+        }
+
+        // Show banner with smooth slide-in (after 3 seconds)
+        setTimeout(() => {
+            const svg = document.getElementById('svg-banner');
+            const content = document.getElementById('bannerContent');
+            content.innerHTML = '<img src="' + svgToDataUrl(svg) + '" alt="TryHackMe" style="width:100%;height:auto;max-height:90px;border-radius:6px;object-fit:contain;">';
+            document.getElementById('sponsorBanner').classList.add('visible');
+        }, 3000);
+
+        // Close button — smooth slide-out
+        function hideBanner() {
+            const banner = document.getElementById('sponsorBanner');
+            banner.classList.remove('visible');
+            banner.classList.add('hidden');
+        }
+
+        // Countdown timer
+        let seconds = 84;
+        setInterval(() => {
+            seconds--;
+            if (seconds < 0) seconds = 120;
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            document.getElementById('demoTimer').textContent = m + ':' + s;
+        }, 1000);
+    </script>
+</body>
+
+</html>
+font-size: 16px;
+color: #00ff88;
+letter-spacing: 2px;
+margin-bottom: 8px;
+}
+
+.lobby-box .sub {
+color: #666;
+font-size: 12px;
+margin-bottom: 20px;
+}
+
+.lobby-box .timer {
+font-size: 36px;
+font-weight: 700;
+color: #fff;
+font-family: 'Courier New', monospace;
+}
+
+.lobby-box .hint {
+color: #444;
+font-size: 11px;
+margin-top: 16px;
+letter-spacing: 1px;
+}
+
+/* ===== SPONSOR BANNER (same as in app) ===== */
+#sponsorBanner {
+position: fixed;
+bottom: 0;
+left: 50%;
+transform: translateX(-50%) translateY(100%);
+z-index: 100;
+max-width: 728px;
+width: 92%;
+text-align: center;
+transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#sponsorBanner.visible {
+transform: translateX(-50%) translateY(0);
+}
+
+#sponsorBanner.hidden {
+transform: translateX(-50%) translateY(100%);
+}
+
+.banner-inner {
+position: relative;
+background: rgba(8, 8, 8, 0.97);
+border: 1px solid rgba(255, 255, 255, 0.08);
+border-radius: 10px 10px 0 0;
+padding: 8px 10px;
+overflow: hidden;
+backdrop-filter: blur(8px);
+box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.banner-inner a {
+display: block;
+text-decoration: none;
+cursor: pointer;
+}
+
+.banner-inner img {
+width: 100%;
+height: auto;
+max-height: 90px;
+border-radius: 6px;
+object-fit: contain;
+}
+
+.banner-close {
+position: absolute;
+top: 6px;
+right: 8px;
+background: rgba(255, 255, 255, 0.08);
+border: none;
+color: rgba(255, 255, 255, 0.5);
+font-size: 16px;
+cursor: pointer;
+line-height: 1;
+width: 22px;
+height: 22px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: background 0.2s;
+}
+
+.banner-close:hover {
+background: rgba(255, 255, 255, 0.15);
+}
+
+.banner-label {
+font-size: 8px;
+color: rgba(255, 255, 255, 0.2);
+text-align: right;
+margin-top: 3px;
+letter-spacing: 0.5px;
+}
+
+/* Demo Controls */
+.demo-controls {
+position: fixed;
+top: 16px;
+right: 16px;
+z-index: 200;
+display: flex;
+flex-direction: column;
+gap: 8px;
+}
+
+.demo-btn {
+padding: 8px 16px;
+border: 1px solid rgba(0, 255, 136, 0.3);
+background: rgba(0, 255, 136, 0.05);
+color: #00ff88;
+border-radius: 6px;
+font-size: 11px;
+cursor: pointer;
+font-family: monospace;
+letter-spacing: 0.5px;
+transition: all 0.2s;
+}
+
+.demo-btn:hover {
+background: rgba(0, 255, 136, 0.15);
+border-color: #00ff88;
+}
+
+.demo-info {
+position: fixed;
+top: 16px;
+left: 16px;
+z-index: 200;
+background: rgba(0, 0, 0, 0.8);
+border: 1px solid rgba(255, 255, 255, 0.1);
+border-radius: 8px;
+padding: 12px 16px;
+font-size: 11px;
+color: #888;
+line-height: 1.8;
+max-width: 280px;
+}
+
+.demo-info strong {
+color: #00ff88;
+}
+
+/* Sample banner designs */
+.sample-banner {
+width: 728px;
+height: 90px;
+border-radius: 6px;
+display: flex;
+align-items: center;
+padding: 0 20px;
+gap: 16px;
+}
+
+.sample-1 {
+background: linear-gradient(135deg, #1a1a2e, #16213e);
+border: 1px solid rgba(0, 200, 255, 0.2);
+}
+
+.sample-2 {
+background: linear-gradient(135deg, #1a0a2e, #2d1b69);
+border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.sample-3 {
+background: linear-gradient(135deg, #0a1a0a, #1a3a1a);
+border: 1px solid rgba(0, 255, 136, 0.2);
+}
+</style>
+</head>
+
+<body>
+    <!-- Simulated Lobby Screen -->
+    <div class="lobby-sim">
+        <div class="lobby-box">
+            <h2>CYBER ASSAULT</h2>
+            <div class="sub">Web Exploitation • Slot #3</div>
+            <div class="timer" id="demoTimer">01:24</div>
+            <div class="hint">Matchmaking in progress</div>
+        </div>
+    </div>
+
+    <!-- Demo Controls -->
+    <div class="demo-controls">
+        <button class="demo-btn" onclick="showBanner(1)">▶ Banner 1 (CyberSec)</button>
+        <button class="demo-btn" onclick="showBanner(2)">▶ Banner 2 (Course)</button>
+        <button class="demo-btn" onclick="showBanner(3)">▶ Banner 3 (Tool)</button>
+        <button class="demo-btn" onclick="hideBanner()">✕ Close Banner</button>
+        <button class="demo-btn" onclick="showBanner(0)">▶ Text-Only Ad</button>
+    </div>
+
+    <!-- Demo Info -->
+    <div class="demo-info">
+        <strong>Ad Preview Mode</strong><br>
+        • Banner slides in after 3s<br>
+        • Click × to slide out<br>
+        • Click banner → opens sponsor URL<br>
+        • Placement: Lobby bottom<br>
+        • Size: 728×90px
+    </div>
+
+    <!-- Sponsor Banner (exact same as in app) -->
+    <div id="sponsorBanner">
+        <div class="banner-inner">
+            <a id="sponsorLink" href="#">
+                <div id="bannerContent"></div>
+            </a>
+            <button class="banner-close" onclick="hideBanner()">×</button>
+            <div class="banner-label">Sponsored</div>
+        </div>
+    </div>
+
+    <!-- Hidden SVG banners (simulating real sponsor images) -->
+    <div style="display:none;">
+        <!-- Banner 1: CyberSec Platform -->
+        <svg id="svg-banner-1" width="728" height="90" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#1a1a2e" />
+                    <stop offset="100%" style="stop-color:#16213e" />
+                </linearGradient>
+            </defs>
+            <rect width="728" height="90" rx="6" fill="url(#bg1)" />
+            <rect x="0" y="0" width="728" height="90" rx="6" stroke="rgba(0,200,255,0.2)" fill="none" />
+            <text x="20" y="35" fill="#00d4ff" font-size="18" font-weight="bold" font-family="Arial">🛡️
+                TryHackMe</text>
+            <text x="20" y="58" fill="#8899aa" font-size="12" font-family="Arial">Learn Cybersecurity. Hands-on Labs.
+                Start Free Today.</text>
+            <rect x="580" y="25" width="120" height="36" rx="6" fill="#00d4ff" />
+            <text x="605" y="48" fill="#000" font-size="12" font-weight="bold" font-family="Arial">Start Free →</text>
+        </svg>
+
+        <!-- Banner 2: Course -->
+        <svg id="svg-banner-2" width="728" height="90" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#1a0a2e" />
+                    <stop offset="100%" style="stop-color:#2d1b69" />
+                </linearGradient>
+            </defs>
+            <rect width="728" height="90" rx="6" fill="url(#bg2)" />
+            <rect x="0" y="0" width="728" height="90" rx="6" stroke="rgba(139,92,246,0.3)" fill="none" />
+            <text x="20" y="35" fill="#a78bfa" font-size="18" font-weight="bold" font-family="Arial">🎓 INE
+                Security</text>
+            <text x="20" y="58" fill="#9988bb" font-size="12" font-family="Arial">OSCP Prep • Penetration Testing • 500+
+                Labs</text>
+            <rect x="560" y="25" width="140" height="36" rx="6" fill="#8b5cf6" />
+            <text x="578" y="48" fill="#fff" font-size="12" font-weight="bold" font-family="Arial">Enroll Now 50%
+                →</text>
+        </svg>
+
+        <!-- Banner 3: Tool -->
+        <svg id="svg-banner-3" width="728" height="90" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#0a1a0a" />
+                    <stop offset="100%" style="stop-color:#1a3a1a" />
+                </linearGradient>
+            </defs>
+            <rect width="728" height="90" rx="6" fill="url(#bg3)" />
+            <rect x="0" y="0" width="728" height="90" rx="6" stroke="rgba(0,255,136,0.2)" fill="none" />
+            <text x="20" y="35" fill="#00ff88" font-size="18" font-weight="bold" font-family="Arial">⚡ NordVPN</text>
+            <text x="20" y="58" fill="#88aa88" font-size="12" font-family="Arial">Stay Anonymous While Hacking. 72% OFF
+                + 3 Months Free.</text>
+            <rect x="560" y="25" width="140" height="36" rx="6" fill="#00ff88" />
+            <text x="582" y="48" fill="#000" font-size="12" font-weight="bold" font-family="Arial">Get Deal Now →</text>
+        </svg>
+    </div>
+
+    <script>
+        // Convert SVG to data URL for img display
+        function svgToDataUrl(svgElement) {
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+        }
+
+        function showBanner(type) {
+            const banner = document.getElementById('sponsorBanner');
+            const content = document.getElementById('bannerContent');
+
+            if (type === 0) {
+                // Text-only ad
+                content.innerHTML = '<div style="color:rgba(255,255,255,0.7);font-size:12px;padding:10px;">🎯 Sponsored: <strong style="color:#00d4ff;">TryHackMe</strong> — Learn hacking with hands-on labs. <span style="color:#00ff88;text-decoration:underline;">Start Free →</span></div>';
+            } else {
+                const svg = document.getElementById('svg-banner-' + type);
+                const imgUrl = svgToDataUrl(svg);
+                content.innerHTML = '<img src="' + imgUrl + '" alt="Sponsor Banner" style="width:100%;height:auto;max-height:90px;border-radius:6px;object-fit:contain;">';
+            }
+
+            // Slide in
+            banner.classList.remove('hidden');
+            banner.classList.add('visible');
+        }
+
+        function hideBanner() {
+            const banner = document.getElementById('sponsorBanner');
+            banner.classList.remove('visible');
+            banner.classList.add('hidden');
+        }
+
+        // Auto-show first banner after 3 seconds (like in real app)
+        setTimeout(() => showBanner(1), 3000);
+
+        // Fake timer
+        let seconds = 84;
+        setInterval(() => {
+            seconds--;
+            if (seconds < 0) seconds = 120;
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            document.getElementById('demoTimer').textContent = m + ':' + s;
+        }, 1000);
+    </script>
+</body>
+
+</html>
