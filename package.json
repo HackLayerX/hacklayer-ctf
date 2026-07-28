@@ -24,12 +24,12 @@
     },
     "license": "UNLICENSED",
     "dependencies": {
-        "electron-updater": "^6.8.3"
+        "electron-updater": "^6.8.9"
     },
     "devDependencies": {
         "cli-truncate": "^4.0.0",
         "electron": "^42.0.1",
-        "electron-builder": "^26.8.1"
+        "electron-builder": "^26.15.3"
     },
     "engines": {
         "node": ">=18.0.0"
