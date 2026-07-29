@@ -89,6 +89,35 @@ jobs:
       - name: List artifacts
         run: find artifacts -type f | head -30
 
+      # The README tells people to verify their download against a published
+      # checksum, so one has to actually be published. Computed here on the
+      # runner from the very files that are about to be uploaded, which is the
+      # only point at which the two are guaranteed to be the same bytes.
+      - name: Generate checksums
+        id: checksums
+        run: |
+          cd artifacts
+          sha256sum *.exe *.dmg *.AppImage > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          {
+            echo 'body<<CHECKSUM_EOF'
+            echo '## Verify your download'
+            echo
+            echo 'Compare the SHA256 of the file you downloaded against the value here.'
+            echo 'If they match, the file is byte-for-byte what was built and published.'
+            echo
+            echo '```'
+            cat SHA256SUMS.txt
+            echo '```'
+            echo
+            echo '| | |'
+            echo '| - | - |'
+            echo '| Windows | `certutil -hashfile <file> SHA256` |'
+            echo '| macOS | `shasum -a 256 <file>` |'
+            echo '| Linux | `sha256sum <file>` |'
+            echo 'CHECKSUM_EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Upload to GitHub Release
         # Pinned to a commit, not a tag. A tag can be moved to point at
         # different code at any time, and this step runs with a token that can
@@ -102,6 +131,9 @@ jobs:
             artifacts/*.exe
             artifacts/*.dmg
             artifacts/*.AppImage
+            artifacts/SHA256SUMS.txt
+          body: ${{ steps.checksums.outputs.body }}
           generate_release_notes: true
+          append_body: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
