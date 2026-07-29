@@ -1,0 +1,62 @@
+name: CodeQL
+
+# Code scanning is free on public repositories, so this uploads results and
+# they appear under Security > Code scanning alerts. The same workflow on a
+# private repository fails at the upload step with "Code scanning is not
+# enabled for this repository", because that needs GitHub Advanced Security.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly, so a newly published advisory is caught even with no commits.
+    - cron: '18 2 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze ${{ matrix.language }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, actions]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          # The default suite is deliberately quiet. security-extended adds the
+          # queries that matter for an app like this — command injection through
+          # child_process, unsafe URL handling, prototype pollution — at the cost
+          # of a few more results to read.
+          queries: security-extended
+          config: |
+            paths-ignore:
+              - '**/node_modules'
+              - 'dist'
+              - 'preview-*.html'
+              - 'dungeon_standalone.html'
+              - 'help-page.html'
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}

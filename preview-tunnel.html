@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Tunnel Animation Preview — HackLayer CTF</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #08080c;
+            color: #d4d4dc;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Cinematic Intro Overlay */
+        #introOverlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            pointer-events: none;
+        }
+
+        #introText {
+            font-family: 'Courier New', monospace;
+            color: rgba(0, 255, 136, 0.7);
+            font-size: 14px;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            opacity: 0;
+            transition: opacity 2s ease;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        #introSubtext {
+            font-family: 'Courier New', monospace;
+            color: rgba(100, 120, 130, 0.5);
+            font-size: 11px;
+            letter-spacing: 3px;
+            margin-top: 12px;
+            opacity: 0;
+            transition: opacity 2s ease 0.5s;
+        }
+
+        #introLoader {
+            width: 120px;
+            height: 1px;
+            background: rgba(0, 255, 136, 0.1);
+            margin-top: 24px;
+            border-radius: 1px;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 1s ease 1s;
+        }
+
+        #introProgress {
+            width: 0%;
+            height: 100%;
+            background: rgba(0, 255, 136, 0.6);
+            transition: width 4s ease-in-out;
+        }
+
+        /* Grid overlay */
+        .grid-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+        }
+
+        /* Info panel */
+        #infoPanel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            background: rgba(14, 14, 20, 0.9);
+            border: 1px solid #1c1c28;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            color: #6b6b80;
+            text-align: center;
+            backdrop-filter: blur(8px);
+        }
+
+        #infoPanel span {
+            color: #00e87b;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="boat-canvas"></canvas>
+    <div class="grid-overlay"></div>
+
+    <!-- Cinematic Intro -->
+    <div id="introOverlay">
+        <div id="introText">ENTERING SECURE ENVIRONMENT</div>
+        <div id="introSubtext">ALL ACTIVITY IS MONITORED</div>
+        <div id="introLoader">
+            <div id="introProgress"></div>
+        </div>
+    </div>
+
+    <div id="infoPanel">
+        This is the <span>Charon's Passage</span> tunnel animation — the background players see during CTF gameplay.
+    </div>
+
+    <script src="src/js/boat-animation.js"></script>
+    <script>
+        // Trigger cinematic intro
+        setTimeout(() => {
+            document.getElementById('introText').style.opacity = '1';
+            document.getElementById('introSubtext').style.opacity = '1';
+            document.getElementById('introLoader').style.opacity = '1';
+            setTimeout(() => {
+                document.getElementById('introProgress').style.width = '100%';
+            }, 500);
+            setTimeout(() => {
+                document.getElementById('introOverlay').style.transition = 'opacity 1.5s ease';
+                document.getElementById('introOverlay').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('introOverlay').style.display = 'none';
+                }, 1500);
+            }, 6000);
+        }, 300);
+    </script>
+</body>
+
+</html>

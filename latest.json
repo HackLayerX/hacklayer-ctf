@@ -1,0 +1,15 @@
+{
+    "version": "1.2.14",
+    "files": {
+        "win": "HackLayer-CTF-Setup-1.2.14.exe",
+        "mac_arm": "HackLayer-CTF-1.2.14-arm64.dmg",
+        "mac_intel": "",
+        "linux": "HackLayer-CTF-1.2.14.AppImage"
+    },
+    "sha256": {
+        "win": "",
+        "mac_arm": "",
+        "mac_intel": "",
+        "linux": ""
+    }
+}

@@ -1,0 +1,102 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            build_cmd: npm run build:win -- --publish never
+          - os: macos-latest
+            build_cmd: npm run build:mac -- --publish never
+          - os: ubuntu-latest
+            build_cmd: npm run build:linux -- --publish never
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Create config.json from secrets
+        shell: bash
+        run: |
+          cat > config.json << 'ENDCONFIG'
+          {
+            "api_url": "PLACEHOLDER_API_URL",
+            "api_secret": "PLACEHOLDER_API_SECRET",
+            "admin_password_hash": "PLACEHOLDER_ADMIN_HASH"
+          }
+          ENDCONFIG
+          node -e "
+            const fs = require('fs');
+            const config = {
+              api_url: process.env.CFG_API_URL,
+              api_secret: process.env.CFG_API_SECRET,
+              admin_password_hash: process.env.CFG_ADMIN_HASH
+            };
+            fs.writeFileSync('config.json', JSON.stringify(config, null, 2));
+          "
+        env:
+          CFG_API_URL: ${{ secrets.API_URL }}
+          CFG_API_SECRET: ${{ secrets.API_SECRET }}
+          CFG_ADMIN_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
+
+      - name: Build
+        run: ${{ matrix.build_cmd }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.os }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.yml
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: find artifacts -type f | head -30
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            artifacts/*.exe
+            artifacts/*.dmg
+            artifacts/*.AppImage
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>HackLayer CTF - Select Event</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="category-container">
+        <div class="page-bg"></div>
+        <div class="category-box card-accent" id="step1Box">
+            <div class="user-info" id="userInfo">
+                <img src="" id="userAvatar" alt="">
+                <div>
+                    <div class="name" id="userName"></div>
+                    <div class="id" id="userId"></div>
+                </div>
+            </div>
+
+            <h2>Select Category</h2>
+            <p style="color:var(--text-muted);margin-bottom:20px;font-size:12px;">Choose a category, then pick an event
+            </p>
+
+            <div class="error-msg" id="errorMsg"></div>
+
+            <div class="form-group">
+                <label>Category</label>
+                <div class="skeleton skeleton-line" id="catSkeleton" style="height:40px;"></div>
+                <select id="categorySelect" style="display:none;">
+                    <option value="">-- Select Category --</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="eventSection" style="display:none;">
+                <label>Event</label>
+                <select id="eventSelect">
+                    <option value="">-- Select Event --</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="codeSection" style="display:none;">
+                <label>Access Code</label>
+                <input type="text" id="accessCode" placeholder="Enter your access code" autocomplete="off">
+            </div>
+
+            <div class="loading" id="loading">
+                <span class="spinner"></span> Validating...
+            </div>
+
+            <button class="btn" id="submitBtn" style="display:none;" onclick="submitCode()">Enter with Code</button>
+            <button class="btn" id="freeBtn" style="display:none;background:var(--accent);color:#000;"
+                onclick="joinFree()">Join Free Event</button>
+
+            <button class="btn btn-secondary" style="margin-top:8px;" onclick="logout()">Logout</button>
+            <button class="btn btn-secondary" style="margin-top:8px;"
+                onclick="window.ctfAPI.navigate('profile.html')">Profile</button>
+            <button class="btn btn-secondary" style="margin-top:8px;" onclick="window.ctfAPI.exitApp()">Exit</button>
+        </div>
+
+        <!-- Step 2: Slot Picker -->
+        <div class="category-box card-accent" id="step2Box" style="display:none;width:520px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+                <button class="btn btn-secondary" style="width:auto;padding:8px 14px;font-size:11px;"
+                    onclick="goBackToStep1()">Back</button>
+                <div>
+                    <div style="font-weight:600;font-size:14px;color:var(--text);" id="slotEventTitle"></div>
+                    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;"
+                        id="slotEventCategory"></div>
+                </div>
+            </div>
+
+            <h2 style="margin-bottom:4px;">Choose Time Slot</h2>
+            <p style="color:var(--text-muted);margin-bottom:16px;font-size:12px;">Select when you want to play. You can
+                only join within the entry window.</p>
+
+            <div class="error-msg" id="slotErrorMsg"></div>
+
+            <div class="loading" id="slotLoading">
+                <span class="spinner"></span> Loading slots...
+            </div>
+
+            <div id="slotList" style="max-height:340px;overflow-y:auto;"></div>
+
+            <div id="noSlots"
+                style="display:none;text-align:center;padding:30px 10px;color:var(--text-muted);font-size:13px;">
+                No upcoming slots available. Check back later.
+            </div>
+        </div>
+    </div>
+
+    <!-- Sponsor Banner (shows during reserved wait time) -->
+    <div id="sponsorBanner"
+        style="position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);z-index:100;max-width:728px;width:92%;text-align:center;transition:transform 0.5s cubic-bezier(0.4,0,0.2,1);">
+        <div
+            style="position:relative;background:rgba(8,8,8,0.97);border:1px solid rgba(255,255,255,0.08);border-radius:10px 10px 0 0;padding:8px 10px;overflow:hidden;backdrop-filter:blur(8px);box-shadow:0 -4px 20px rgba(0,0,0,0.5);">
+            <a id="sponsorLink" href="#" style="display:block;text-decoration:none;cursor:pointer;">
+                <img id="sponsorImg" src="" alt=""
+                    style="width:100%;height:auto;max-height:90px;border-radius:6px;display:none;object-fit:contain;">
+                <div id="sponsorText" style="color:rgba(255,255,255,0.7);font-size:12px;padding:6px 10px;display:none;">
+                </div>
+            </a>
+            <button id="sponsorClose" onclick="closeSponsor()"
+                style="position:absolute;top:6px;right:8px;background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);font-size:16px;cursor:pointer;line-height:1;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background 0.2s;"
+                onmouseover="this.style.background='rgba(255,255,255,0.15)'"
+                onmouseout="this.style.background='rgba(255,255,255,0.08)'">×</button>
+            <div
+                style="font-size:8px;color:rgba(255,255,255,0.15);text-align:right;margin-top:3px;letter-spacing:0.5px;">
+                Sponsored</div>
+        </div>
+    </div>
+
+    <div class="offline-bar" id="offlineBar">No Internet Connection</div>
+
+    <script>
+        // Offline indicator
+        window.addEventListener('offline', () => document.getElementById('offlineBar').classList.add('show'));
+        window.addEventListener('online', () => document.getElementById('offlineBar').classList.remove('show'));
+        if (!navigator.onLine) document.getElementById('offlineBar').classList.add('show');
+
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        const token = sessionStorage.getItem('ctf_token');
+        const user = JSON.parse(sessionStorage.getItem('ctf_user') || '{}');
+
+        if (!token) window.ctfAPI.navigate('login.html');
+
+        // Show user info
+        document.getElementById('userName').textContent = user.display_name || user.username;
+        document.getElementById('userId').textContent = 'ID: #' + user.id;
+        if (user.avatar) {
+            const av = document.getElementById('userAvatar');
+            av.onerror = () => { av.style.display = 'none'; };
+            av.src = user.avatar;
+        }
+
+        let validatedEvent = null;
+        let allEvents = [];
+        let slotRefreshInterval = null;
+
+        // Load events and populate category dropdown
+        (async () => {
+            try {
+                const res = await window.ctfAPI.request('/events', 'GET', null, token);
+
+                const catSelect = document.getElementById('categorySelect');
+                const skeleton = document.getElementById('catSkeleton');
+                catSelect.innerHTML = '<option value="">-- Select Category --</option>';
+                if (res.status === 200 && res.data.events) {
+                    allEvents = res.data.events;
+                    const categories = [...new Set(allEvents.map(ev => ev.category))];
+                    categories.forEach(cat => {
+                        const opt = document.createElement('option');
+                        opt.value = cat;
+                        opt.textContent = cat;
+                        catSelect.appendChild(opt);
+                    });
+                }
+                skeleton.style.display = 'none';
+                catSelect.style.display = 'block';
+            } catch (err) {
+                document.getElementById('catSkeleton').style.display = 'none';
+                document.getElementById('categorySelect').style.display = 'block';
+                const errorEl = document.getElementById('errorMsg');
+                errorEl.innerHTML = 'Failed to load events. <button class="retry-btn" onclick="location.reload()">Retry</button>';
+                errorEl.classList.add('show');
+            }
+        })();
+
+        // When category changes, populate the event dropdown
+        document.getElementById('categorySelect').addEventListener('change', function () {
+            const eventSection = document.getElementById('eventSection');
+            const eventSelect = document.getElementById('eventSelect');
+            const codeSection = document.getElementById('codeSection');
+            const submitBtn = document.getElementById('submitBtn');
+            const freeBtn = document.getElementById('freeBtn');
+
+            // Reset downstream
+            codeSection.style.display = 'none';
+            submitBtn.style.display = 'none';
+            freeBtn.style.display = 'none';
+            document.getElementById('errorMsg').classList.remove('show');
+
+            if (!this.value) {
+                eventSection.style.display = 'none';
+                return;
+            }
+
+            // Filter events by selected category
+            const filtered = allEvents.filter(ev => ev.category === this.value);
+            eventSelect.innerHTML = '<option value="">-- Select Event --</option>';
+            filtered.forEach(ev => {
+                const opt = document.createElement('option');
+                opt.value = ev.id;
+                const tag = ev.event_type === 'free' ? '  #free' : '  #paid';
+                opt.textContent = ev.title + tag;
+                opt.dataset.type = ev.event_type;
+                opt.dataset.category = ev.category;
+                eventSelect.appendChild(opt);
+            });
+
+            eventSection.style.display = 'block';
+        });
+
+        // When event changes, show the code field or the free button
+        document.getElementById('eventSelect').addEventListener('change', function () {
+            const selected = this.options[this.selectedIndex];
+            const type = selected?.dataset?.type;
+            const codeSection = document.getElementById('codeSection');
+            const submitBtn = document.getElementById('submitBtn');
+            const freeBtn = document.getElementById('freeBtn');
+
+            if (!this.value) {
+                codeSection.style.display = 'none';
+                submitBtn.style.display = 'none';
+                freeBtn.style.display = 'none';
+                return;
+            }
+
+            if (type === 'paid') {
+                codeSection.style.display = 'block';
+                submitBtn.style.display = 'block';
+                freeBtn.style.display = 'none';
+                document.getElementById('accessCode').value = '';
+                document.getElementById('accessCode').focus();
+            } else {
+                codeSection.style.display = 'none';
+                submitBtn.style.display = 'none';
+                freeBtn.style.display = 'block';
+            }
+
+            document.getElementById('errorMsg').classList.remove('show');
+        });
+
+        // Join free event (no code needed)
+        async function joinFree() {
+            const select = document.getElementById('eventSelect');
+            const eventId = parseInt(select.value, 10);
+            const selected = select.options[select.selectedIndex];
+            const errorEl = document.getElementById('errorMsg');
+            const loadingEl = document.getElementById('loading');
+            const btn = document.getElementById('freeBtn');
+
+            errorEl.classList.remove('show');
+
+            if (!eventId) {
+                errorEl.textContent = 'Please select an event.';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            btn.disabled = true;
+            loadingEl.classList.add('show');
+
+            try {
+                const res = await window.ctfAPI.request('/validate-code', 'POST', {
+                    event_id: eventId,
+                    category: selected.dataset.category || '',
+                    code: 'FREE'
+                }, token);
+
+                if (res.status === 200 && res.data.success) {
+                    validatedEvent = res.data;
+                    sessionStorage.setItem('ctf_event', JSON.stringify(res.data));
+                    showSlotPicker();
+                } else {
+                    errorEl.textContent = (res.data && (res.data.error || res.data.message)) || 'Could not join this free event.';
+                    errorEl.classList.add('show');
+                }
+            } catch (err) {
+                errorEl.innerHTML = 'Connection error. <button class="retry-btn" onclick="joinFree()">Retry</button>';
+                errorEl.classList.add('show');
+            }
+
+            btn.disabled = false;
+            loadingEl.classList.remove('show');
+        }
+
+        // Submit paid code
+        async function submitCode() {
+            const select = document.getElementById('eventSelect');
+            const selected = select.options[select.selectedIndex];
+            const code = document.getElementById('accessCode').value.trim();
+            const errorEl = document.getElementById('errorMsg');
+            const loadingEl = document.getElementById('loading');
+            const btn = document.getElementById('submitBtn');
+
+            errorEl.classList.remove('show');
+
+            if (!select.value) {
+                errorEl.textContent = 'Please select an event.';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            if (!code) {
+                errorEl.textContent = 'Please enter your access code.';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            btn.disabled = true;
+            loadingEl.classList.add('show');
+
+            try {
+                const res = await window.ctfAPI.request('/validate-code', 'POST', {
+                    event_id: parseInt(select.value, 10) || 0,
+                    category: selected.dataset.category || '',
+                    code: code
+                }, token);
+
+                if (res.status === 200 && res.data.success) {
+                    validatedEvent = res.data;
+                    sessionStorage.setItem('ctf_event', JSON.stringify(res.data));
+                    showSlotPicker();
+                } else {
+                    errorEl.textContent = res.data.error || 'Invalid code.';
+                    errorEl.classList.add('show');
+                }
+            } catch (err) {
+                errorEl.innerHTML = 'Connection error. <button class="retry-btn" onclick="submitCode()">Retry</button>';
+                errorEl.classList.add('show');
+            }
+
+            btn.disabled = false;
+            loadingEl.classList.remove('show');
+        }
+
+        // Step 2: Show slot picker
+        async function showSlotPicker() {
+            document.getElementById('step1Box').style.display = 'none';
+            document.getElementById('step2Box').style.display = 'block';
+            document.getElementById('slotEventTitle').textContent = validatedEvent.event_title;
+            document.getElementById('slotEventCategory').textContent = validatedEvent.category || '';
+
+            await loadSlots();
+            if (reservedSlotId) startReservationTimer();
+
+            // Auto-refresh slots every 45 seconds
+            if (slotRefreshInterval) clearInterval(slotRefreshInterval);
+            slotRefreshInterval = setInterval(async () => {
+                await loadSlots();
+                if (reservedSlotId) startReservationTimer();
+            }, 45000);
+        }
+
+        async function loadSlots() {
+            const slotLoading = document.getElementById('slotLoading');
+            const slotList = document.getElementById('slotList');
+            const noSlots = document.getElementById('noSlots');
+            const errorEl = document.getElementById('slotErrorMsg');
+
+            slotLoading.classList.add('show');
+            slotList.innerHTML = '';
+            noSlots.style.display = 'none';
+            errorEl.classList.remove('show');
+
+            try {
+                const res = await window.ctfAPI.request(`/slots/${validatedEvent.event_id}`, 'GET', null, token);
+                slotLoading.classList.remove('show');
+
+                if (res.status === 200 && res.data.slots.length > 0) {
+                    const duration = res.data.duration_minutes;
+                    const joinWindow = res.data.join_window_minutes;
+
+                    res.data.slots.forEach(slot => {
+                        const startTime = new Date(slot.starts_at.replace(' ', 'T'));
+                        const endTime = new Date(slot.ends_at.replace(' ', 'T'));
+                        const deadline = new Date(slot.join_deadline.replace(' ', 'T'));
+                        const now = new Date();
+
+                        const timeStr = formatTime(startTime) + ' — ' + formatTime(endTime);
+                        const durationMin = Math.round((endTime - startTime) / 60000);
+                        const dateStr = formatDate(startTime) + ' · ' + durationMin + ' min';
+                        const spotsLeft = slot.max_players - slot.current_players;
+
+                        let statusText, statusClass, canJoin;
+
+                        if (slot.joinable) {
+                            if (now >= startTime) {
+                                const minsLeft = Math.max(0, Math.ceil((deadline - now) / 60000));
+                                statusText = 'LIVE - ' + minsLeft + ' min to join';
+                                statusClass = 'slot-live';
+                            } else {
+                                const minsUntil = Math.ceil((startTime - now) / 60000);
+                                statusText = 'Opens in ' + minsUntil + ' min';
+                                statusClass = 'slot-open';
+                            }
+                            canJoin = true;
+                        } else {
+                            const minsUntil = Math.ceil((startTime - now) / 60000);
+                            if (minsUntil > 60) {
+                                const hrs = Math.floor(minsUntil / 60);
+                                const mins = minsUntil % 60;
+                                statusText = 'Starts in ' + hrs + 'h ' + mins + 'm';
+                            } else {
+                                statusText = 'Starts in ' + minsUntil + ' min';
+                            }
+                            statusClass = 'slot-upcoming';
+                            canJoin = false;
+                        }
+
+                        const card = document.createElement('div');
+                        card.className = 'slot-card ' + statusClass;
+
+                        const timeRow = document.createElement('div');
+                        timeRow.className = 'slot-time-row';
+                        const timeDiv = document.createElement('div');
+                        timeDiv.className = 'slot-time';
+                        timeDiv.textContent = timeStr;
+                        const dateDiv = document.createElement('div');
+                        dateDiv.className = 'slot-date';
+                        dateDiv.textContent = dateStr;
+                        timeRow.appendChild(timeDiv);
+                        timeRow.appendChild(dateDiv);
+
+                        const infoRow = document.createElement('div');
+                        infoRow.className = 'slot-info-row';
+                        const statusBadge = document.createElement('span');
+                        statusBadge.className = 'slot-status-badge ' + statusClass;
+                        statusBadge.textContent = statusText;
+                        infoRow.appendChild(statusBadge);
+
+                        const btn = document.createElement('button');
+                        const safeSlotId = parseInt(slot.slot_id, 10);
+                        const joinClosed = now > deadline;
+                        btn.style.cssText = 'margin-top:10px;font-size:12px;padding:10px;';
+
+                        if (reservedSlotId === safeSlotId) {
+                            btn.className = 'btn';
+                            btn.id = 'reservedBtn';
+                            btn.disabled = true;
+                            btn.textContent = 'Reserved';
+                            btn.style.background = 'var(--accent)';
+                            btn.style.color = '#000';
+                            btn.style.fontWeight = '700';
+                            card.style.border = '1px solid var(--accent)';
+                        } else if (joinClosed || reservedSlotId) {
+                            btn.className = 'btn btn-secondary';
+                            btn.disabled = true;
+                            btn.textContent = joinClosed ? 'Closed' : 'Reserve';
+                        } else {
+                            btn.className = 'btn';
+                            btn.disabled = false;
+                            btn.textContent = 'Reserve';
+                            if (!isNaN(safeSlotId)) {
+                                btn.addEventListener('click', () => reserveSlot(safeSlotId, card));
+                            }
+                        }
+
+                        card.appendChild(timeRow);
+                        card.appendChild(infoRow);
+                        card.appendChild(btn);
+                        if (reservedSlotId === safeSlotId) {
+                            const cancelLink = document.createElement('div');
+                            cancelLink.style.cssText = 'text-align:center;margin-top:6px;';
+                            cancelLink.innerHTML = '<a href="#" style="font-size:10px;color:var(--text-muted);text-decoration:underline;" onclick="cancelReservation();return false;">Cancel Reservation</a>';
+                            card.appendChild(cancelLink);
+                        }
+                        slotList.appendChild(card);
+                    });
+                } else {
+                    noSlots.style.display = 'block';
+                }
+            } catch (err) {
+                slotLoading.classList.remove('show');
+                errorEl.textContent = 'Failed to load slots.';
+                errorEl.classList.add('show');
+            }
+        }
+
+        let reservationTimer = null;
+        let reservedSessionId = null;
+        let reservedSlotId = null;
+        let reservedSlotData = null;
+        let startReady = false;
+
+        // ── Check if returning from camera test with pending reservation ──
+        (async function checkPendingReservation() {
+            const pendingSlot = sessionStorage.getItem('ctf_pending_slot');
+            const cameraDone = sessionStorage.getItem('ctf_camera_done');
+            if (!pendingSlot || !cameraDone) return;
+
+            const savedEvent = sessionStorage.getItem('ctf_event');
+            if (!savedEvent) return;
+
+            validatedEvent = JSON.parse(savedEvent);
+
+            // Show step 2 directly
+            document.getElementById('step1Box').style.display = 'none';
+            document.getElementById('step2Box').style.display = 'block';
+            document.getElementById('slotEventTitle').textContent = validatedEvent.event_title;
+            document.getElementById('slotEventCategory').textContent = validatedEvent.category || '';
+
+            await completeReservation(parseInt(pendingSlot, 10));
+        })();
+
+        // Step 1: Reserve click sends the player to the camera test first
+        function reserveSlot(slotId, card) {
+            sessionStorage.setItem('ctf_pending_slot', String(slotId));
+            sessionStorage.setItem('ctf_pending_code_id', String(validatedEvent.code_id || 0));
+            sessionStorage.removeItem('ctf_camera_done');
+            sessionStorage.removeItem('ctf_camera_skipped');
+            window.ctfAPI.navigate('camera-test.html');
+        }
+
+        // Step 2: camera done, join via API, reload slots showing reserved state
+        async function completeReservation(slotId) {
+            const errorEl = document.getElementById('slotErrorMsg');
+            const slotList = document.getElementById('slotList');
+            errorEl.classList.remove('show');
+
+            slotList.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:13px;"><span class="spinner"></span> Reserving your spot...</div>';
+
+            try {
+                const codeId = parseInt(sessionStorage.getItem('ctf_pending_code_id') || String(validatedEvent.code_id || 0), 10);
+                sessionStorage.removeItem('ctf_pending_slot');
+                sessionStorage.removeItem('ctf_pending_code_id');
+
+                let joinRes = await window.ctfAPI.request('/slot/join', 'POST', {
+                    slot_id: slotId,
+                    code_id: codeId
+                }, token);
+
+                // Auto-recover: if old session blocks, end it and retry once
+                if (joinRes.status === 400 && joinRes.data.active_session_id) {
+                    await window.ctfAPI.request('/end-session', 'POST', {
+                        session_id: joinRes.data.active_session_id,
+                    }, token);
+                    joinRes = await window.ctfAPI.request('/slot/join', 'POST', {
+                        slot_id: slotId,
+                        code_id: codeId
+                    }, token);
+                }
+
+                if (joinRes.status === 200 && joinRes.data.success) {
+                    reservedSessionId = joinRes.data.session_id;
+                    reservedSlotId = slotId;
+
+                    // Store slot data for countdown + game entry
+                    const slotRes = await window.ctfAPI.request('/slot', 'POST', {
+                        event_id: validatedEvent.event_id
+                    }, token);
+                    if (slotRes.status === 200) {
+                        sessionStorage.setItem('ctf_slot', JSON.stringify(slotRes.data));
+                        reservedSlotData = slotRes.data;
+                    }
+
+                    // Reload slots - the reserved slot shows an inline "Reserved" button
+                    await loadSlots();
+                    startReservationTimer();
+
+                    // Set up auto-refresh if not already running
+                    if (!slotRefreshInterval) {
+                        slotRefreshInterval = setInterval(async () => {
+                            await loadSlots();
+                            if (reservedSlotId) startReservationTimer();
+                        }, 45000);
+                    }
+                } else {
+                    errorEl.textContent = joinRes.data.error || 'Could not reserve slot.';
+                    errorEl.classList.add('show');
+                    await loadSlots();
+                }
+            } catch (err) {
+                errorEl.innerHTML = 'Connection error. <button class="retry-btn" onclick="location.reload()">Retry</button>';
+                errorEl.classList.add('show');
+            }
+        }
+
+        // ── Inline countdown timer on the reserved slot's button ──
+        function startReservationTimer() {
+            if (reservationTimer) clearInterval(reservationTimer);
+            if (!reservedSlotData) return;
+
+            const startTime = new Date(reservedSlotData.starts_at?.replace(' ', 'T'));
+            const graceSec = 150; // 2.5 min after slot start = deadline
+            const matchTime = new Date(startTime.getTime() + graceSec * 1000);
+            startReady = false;
+
+            function tick() {
+                const btn = document.getElementById('reservedBtn');
+                if (!btn) return;
+                const now = new Date();
+
+                // Phase 3: event started, show START
+                if (now >= startTime) {
+                    if (!startReady) {
+                        startReady = true;
+                        btn.textContent = 'START';
+                        btn.disabled = false;
+                        btn.style.cursor = 'pointer';
+                        btn.onclick = () => startMatch();
+                    }
+                    const deadlineDiff = matchTime - now;
+                    if (deadlineDiff <= 0) {
+                        clearInterval(reservationTimer);
+                        btn.textContent = 'Too Late';
+                        btn.disabled = true;
+                        btn.style.background = '#333';
+                        btn.style.color = '#666';
+                    }
+                    return;
+                }
+
+                // Phase 2: Countdown on button
+                const secsLeft = Math.ceil((startTime - now) / 1000);
+                const m = Math.floor(secsLeft / 60);
+                const s = secsLeft % 60;
+
+                if (m < 5) {
+                    btn.textContent = 'Reserved - ' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+                } else if (m > 60) {
+                    const hrs = Math.floor(m / 60);
+                    const mins = m % 60;
+                    btn.textContent = 'Reserved - ' + hrs + 'h ' + mins + 'm';
+                } else {
+                    btn.textContent = 'Reserved - ' + m + 'm';
+                }
+            }
+
+            reservationTimer = setInterval(tick, 1000);
+            tick();
+        }
+
+        // START goes straight to secure-env, the camera test is already done
+        function startMatch() {
+            if (!startReady) return;
+            if (reservationTimer) { clearInterval(reservationTimer); reservationTimer = null; }
+            window.ctfAPI.navigate('secure-env.html');
+        }
+
+        async function cancelReservation() {
+            if (reservationTimer) { clearInterval(reservationTimer); reservationTimer = null; }
+
+            try {
+                if (reservedSessionId) {
+                    await window.ctfAPI.request('/end-session', 'POST', {
+                        session_id: reservedSessionId
+                    }, token);
+                }
+            } catch (e) { }
+
+            reservedSessionId = null;
+            reservedSlotId = null;
+            reservedSlotData = null;
+            sessionStorage.removeItem('ctf_slot');
+
+            await loadSlots();
+        }
+
+        function goBackToStep1() {
+            if (slotRefreshInterval) { clearInterval(slotRefreshInterval); slotRefreshInterval = null; }
+            document.getElementById('step2Box').style.display = 'none';
+            document.getElementById('step1Box').style.display = 'block';
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        }
+
+        function formatDate(date) {
+            return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.ctfAPI.clearSession();
+            window.ctfAPI.navigate('login.html');
+        }
+
+        // ===== SECURITY HELPERS =====
+        function sanitizeText(str) {
+            if (typeof str !== 'string') return '';
+            const el = document.createElement('span');
+            el.textContent = str;
+            return el.textContent;
+        }
+
+        function sanitizeHtml(html) {
+            if (typeof html !== 'string') return '';
+            // Use DOMParser to strip dangerous elements/attributes
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const allowedTags = ['b', 'i', 'u', 'em', 'strong', 'span', 'p', 'br', 'a', 'img', 'div'];
+            const allowedAttrs = ['href', 'src', 'alt', 'style', 'class', 'target'];
+
+            function cleanNode(node) {
+                const walker = document.createTreeWalker(node, NodeFilter.SHOW_ELEMENT);
+                const toRemove = [];
+                while (walker.nextNode()) {
+                    const el = walker.currentNode;
+                    if (!allowedTags.includes(el.tagName.toLowerCase())) {
+                        toRemove.push(el);
+                        continue;
+                    }
+                    // Remove all event handler attributes and dangerous attrs
+                    for (const attr of [...el.attributes]) {
+                        if (!allowedAttrs.includes(attr.name.toLowerCase()) || attr.name.toLowerCase().startsWith('on')) {
+                            el.removeAttribute(attr.name);
+                        }
+                        // Block javascript: in href/src
+                        if ((attr.name === 'href' || attr.name === 'src') && /^\s*javascript:/i.test(attr.value)) {
+                            el.removeAttribute(attr.name);
+                        }
+                    }
+                }
+                toRemove.forEach(el => el.remove());
+            }
+            cleanNode(doc.body);
+            return doc.body.innerHTML;
+        }
+
+        function isSafeUrl(url) {
+            if (typeof url !== 'string') return false;
+            try {
+                const parsed = new URL(url);
+                return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+            } catch (e) { return false; }
+        }
+
+        // ===== SPONSOR BANNER (shows after reservation) =====
+        let sponsorLoaded = false;
+        async function loadSponsor() {
+            if (sponsorLoaded) return;
+            sponsorLoaded = true;
+            try {
+                const res = await window.ctfAPI.request('/sponsors?placement=lobby_banner', 'GET', null, token);
+                if (!res || !res.settings?.enabled || !res.banners?.length) return;
+                const banner = res.banners[0];
+                const container = document.getElementById('sponsorBanner');
+                const link = document.getElementById('sponsorLink');
+                const img = document.getElementById('sponsorImg');
+                const text = document.getElementById('sponsorText');
+                const closeBtn = document.getElementById('sponsorClose');
+
+                if (!res.settings.close_button) closeBtn.style.display = 'none';
+
+                link.onclick = function (e) {
+                    e.preventDefault();
+                    if (banner.click_url && isSafeUrl(banner.click_url)) {
+                        window.ctfAPI.openExternal(banner.click_url);
+                        window.ctfAPI.request('/sponsors/click', 'POST', { banner_id: banner.id }, token).catch(() => { });
+                    }
+                };
+
+                if (banner.type === 'image' && banner.image_url && isSafeUrl(banner.image_url)) {
+                    img.src = banner.image_url;
+                    img.alt = sanitizeText(banner.sponsor_name || '');
+                    img.style.display = 'block';
+                } else if (banner.type === 'text') {
+                    text.textContent = sanitizeText(banner.title) + (banner.sponsor_name ? ' — ' + sanitizeText(banner.sponsor_name) : '');
+                    text.style.display = 'block';
+                } else if (banner.type === 'html' && banner.html_content) {
+                    // Sanitize HTML: strip all script/event handlers, allow only safe tags
+                    text.innerHTML = sanitizeHtml(banner.html_content);
+                    text.style.display = 'block';
+                }
+
+                // Slide in after 3 seconds
+                setTimeout(() => {
+                    container.style.transform = 'translateX(-50%) translateY(0)';
+                }, 3000);
+
+                // Track impression
+                window.ctfAPI.request('/sponsors/impression', 'POST', { banner_id: banner.id }, token).catch(() => { });
+            } catch (e) { /* no ads, no problem */ }
+        }
+
+        function closeSponsor() {
+            document.getElementById('sponsorBanner').style.transform = 'translateX(-50%) translateY(100%)';
+        }
+
+        // Hook: load sponsor when reservation completes (override original startReservationTimer)
+        const _origStartTimer = startReservationTimer;
+        startReservationTimer = function () {
+            _origStartTimer();
+            loadSponsor();
+        };
+    </script>
+</body>
+
+</html>
