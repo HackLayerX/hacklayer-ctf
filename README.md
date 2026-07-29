@@ -58,12 +58,12 @@ chmod +x HackLayer-CTF-*.AppImage
 
 ## Verify your download
 
-Every release is published with a SHA256 checksum. Comparing it takes a few
-seconds and confirms the file you have is byte-for-byte the one built and
-published here, with nothing added on the way.
+Every release carries a SHA256 for each file, both in the release notes and as
+a `SHA256SUMS.txt` you can download. They are generated on the build machine
+from the same files that get uploaded, so a match means the file you have is
+byte-for-byte the one built here.
 
-Checksums are on the
-[release page](https://github.com/HackLayerX/hacklayer-ctf/releases):
+Run the check for your platform and compare the result:
 
 ```powershell
 certutil -hashfile "HackLayer-CTF-Setup-1.2.15.exe" SHA256
@@ -74,21 +74,32 @@ shasum -a 256 ~/Downloads/HackLayer-CTF-1.2.15-arm64.dmg    # macOS
 sha256sum HackLayer-CTF-1.2.15.AppImage                     # Linux
 ```
 
-If the two match, the file is byte-for-byte what was built and published here.
+On Linux and macOS you can check everything at once instead:
+
+```bash
+curl -fsSLO https://github.com/HackLayerX/hacklayer-ctf/releases/latest/download/SHA256SUMS.txt
+sha256sum -c SHA256SUMS.txt --ignore-missing
+```
 
 ---
 
 ## Download
 
-Every build is published on the
-[releases page](https://github.com/HackLayerX/hacklayer-ctf/releases), with
-checksums.
+The [latest release](https://github.com/HackLayerX/hacklayer-ctf/releases/latest)
+has builds for all three platforms, with checksums.
 
 | Platform | File |
 | -------- | ---- |
 | Windows | `HackLayer-CTF-Setup-<version>.exe` |
 | macOS (Apple Silicon) | `HackLayer-CTF-<version>-arm64.dmg` |
 | Linux | `HackLayer-CTF-<version>.AppImage` |
+
+These links always point at the newest build:
+
+| | |
+| - | - |
+| Windows | [latest .exe](https://github.com/HackLayerX/hacklayer-ctf/releases/latest) |
+| Checksums | [SHA256SUMS.txt](https://github.com/HackLayerX/hacklayer-ctf/releases/latest/download/SHA256SUMS.txt) |
 
 ---
 
