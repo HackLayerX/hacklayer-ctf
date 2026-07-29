@@ -90,7 +90,12 @@ jobs:
         run: find artifacts -type f | head -30
 
       - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v2
+        # Pinned to a commit, not a tag. A tag can be moved to point at
+        # different code at any time, and this step runs with a token that can
+        # write to the repository — so whoever controls the tag would control
+        # what runs here. The SHA cannot be repointed.
+        # softprops/action-gh-release v3.0.2
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228
         with:
           draft: true
           files: |
